@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styleroom.css') }}">
+    <title>Tạo Phòng Thi</title>
+</head>
+<body>
+    <div class="form-container">
+    <h1>Tạo Phòng Thi</h1>
+    <form method="post" action="/create-room" enctype="multipart/form-data">
+        <div class="form-group">
+        <label>Tên môn thi:</label>
+        <input type="text" name="subject_name" required>
+        </div>
+
+        <div class="form-group">
+
+
+        <label>Thời gian làm bài (phút):</label>
+        <select name="duration" required>
+        <option value="5">5 phút</option>
+        <option value="30">30 phút</option>
+        <option value="60">60 phút</option>
+        <option value="75">75 phút</option>
+        <option value="90">90 phút</option>
+        <option value="120">120 phút</option>
+        </select>
+        </div>
+
+        <div class="form-group">
+
+        <label>Chọn Bộ Đề:</label>
+        <select id="exam_set_id" name="exam_set_id" required>
+        {% for exam_set in exam_sets %}
+        <option value="{{ exam_set.id }}"
+        {% if exam_set.id == selected_exam_set_id %}selected{% endif %}>
+         {{ exam_set.set_name }}
+         </option>
+        {% endfor %}
+</select>
+        </div>
+
+        <div class="form-group">
+        <label>Giờ mở phòng thi:</label>
+        <input type="datetime-local" name="open_time" required>
+         </div>
+
+         <div class="form-group">
+
+        <label>Thời gian cho phép vào trễ (phút):</label>
+        <select name="grace_period" required>
+        <option value="5">5 phút</option>
+        <option value="10">10 phút</option>
+        <option value="20" selected>20 phút</option>
+        <option value="30">30 phút</option>
+        <option value="40">40 phút</option>
+        <option value="50">50 phút</option>
+        </select>
+        </div>
+
+        <!-- Trong HTML (luôn luôn) -->
+        <input type="hidden" name="difficulty_easy_pct" value="0">
+        <input type="hidden" name="difficulty_medium_pct" value="0">
+        <input type="hidden" name="difficulty_hard_pct" value="0">
+
+         <div class="form-group">
+
+
+        <label for="student_file">Danh sách sinh viên (.xlsx):</label>
+        <input type="file" name="student_file" accept=".xlsx">
+        
+        </div>
+          
+
+        <button type="submit">Tạo phòng</button>
+
+        <div id="score-config" style="display: block;">
+            <label for="easy_percentage">Phân bổ điểm câu dễ (%)</label>
+            <input type="number" name="easy_percentage" min="0" max="100" value="20" required>
+    
+            <label for="medium_percentage">Phân bổ điểm câu trung bình (%)</label>
+            <input type="number" name="medium_percentage" min="0" max="100" value="50" required>
+          
+            <label for="hard_percentage">Phân bổ điểm câu khó (%)</label>
+            <input type="number" name="hard_percentage" min="0" max="100" value="30" required>
+          </div>
+    </form>
+    </div>
+    <script>
+        document.getElementById('exam_set_id').addEventListener('change', function () {
+    const examSetId = this.value;
+    console.log("👉 Bộ đề được chọn:", examSetId);
+
+    fetch(`/api/exam-set-type/${examSetId}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("📦 Dữ liệu loại đề trả về:", data);
+
+            const configDiv = document.getElementById('score-config');
+
+            if (data.is_advanced) {
+                configDiv.style.display = 'block';
+                console.log("🟢 Đây là đề nâng cao, hiển thị bảng phân bổ điểm");
+
+                // Gọi API lấy mức độ có thật trong đề
+                fetch(`/api/exam-set-levels/${examSetId}`)
+                    .then(response => response.json())
+                    .then(levelData => {
+                        console.log("📊 Các mức độ có trong đề:", levelData);
+                        const levels = levelData.levels;
+
+                        const allInputs = {
+                            easy: configDiv.querySelector('[name="easy_percentage"]'),
+                            medium: configDiv.querySelector('[name="medium_percentage"]'),
+                            hard: configDiv.querySelector('[name="hard_percentage"]')
+                        };
+
+                        for (let key in allInputs) {
+                            const input = allInputs[key];
+                            const label = input.previousElementSibling;
+
+                            if (levels.includes(key)) {
+                                label.style.display = 'inline-block';
+                                input.type = 'number'; 
+                                input.style.display = 'inline-block';
+                                if (levels.length === 1) input.value = 100;
+                                console.log(`✅ Hiện ô nhập mức độ ${key}`);
+                                console.log(`✅ Hiện ô nhập ${key}: value = ${input.value}`);
+                            } else {
+                                label.style.display = 'none';
+                                input.style.display = 'hidden';
+                                input.value = 0;
+                                console.log(`🚫 Ẩn ô nhập mức độ ${key}`);
+                                console.log(`🚫 Ẩn nhãn ${key}, gán input ${key} = 0 để đảm bảo form gửi`);
+                            }
+                        }
+                    })
+                    .catch(err => console.error("❌ Lỗi khi lấy mức độ đề:", err));
+            } else {
+                configDiv.style.display = 'none';
+                console.log("🔒 Không phải đề nâng cao — ẩn bảng phân bổ điểm");
+            }
+        })
+        .catch(err => console.error("❌ Lỗi khi kiểm tra loại đề:", err));
+});
+        </script>
+
+    <script>
+  window.onload = function () {
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          alert("{{ message }}");
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  };
+
+
+
+  // đoạn này mới thêm vào
+
+
+  function containsEmoji(str) {
+    return /[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/u.test(str);
+}
+
+function containsSpecialChars(str) {
+    return /[^a-zA-Z0-9À-ỹ\s]/.test(str);
+}
+
+function validateSubjectName(event) {
+    const field = document.querySelector('input[name="subject_name"]');
+    if (!field) return;
+
+    // Xoá lỗi cũ
+    document.querySelectorAll('.subject-error').forEach(el => el.remove());
+
+    const value = field.value.trim();
+    let errorMsg = "";
+
+    if (value.length < 2 || value.length > 100) {
+        errorMsg = "Tên môn học phải từ 2 đến 100 ký tự.";
+    } else if (containsEmoji(value)) {
+        errorMsg = "Không được nhập emoji.";
+    } else if (containsSpecialChars(value)) {
+        errorMsg = "Không được chứa ký tự đặc biệt.";
+    }
+
+    if (errorMsg) {
+        const errorEl = document.createElement("div");
+        errorEl.className = "subject-error";
+        errorEl.style.color = "red";
+        errorEl.style.marginTop = "5px";
+        errorEl.innerText = errorMsg;
+        field.parentNode.appendChild(errorEl);
+        event.preventDefault();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener("submit", validateSubjectName);
+    }
+});
+
+</script>
+
+</body>
+</html>

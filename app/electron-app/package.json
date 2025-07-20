@@ -1,0 +1,20 @@
+{
+  "name": "electron-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^36.2.0"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "electron-builder": "^26.0.12"
+  }
+}

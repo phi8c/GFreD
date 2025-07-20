@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web App Sinh Câu Hỏi</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      table {
+        width: 70%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+      }
+      button {
+        margin-top: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <!--<button id="toggleSidebar" style="margin-bottom: 20px;">Thu gọn/ hiện to</button> -->
+    <div class="layout-wrapper">
+      <!-- wrapper chứa cả sidebar và content -->
+
+      <!-- từ chỗ này là sidebar-->
+      <div class="sidebar hidden" id="sidebarLeft">
+        <button id="toggleSidebar" class="toggle-sidebar-left"></button>
+
+        <h3>Bộ đề của bạn</h3>
+        <input type="text" id="searchInput" placeholder="🔍 Tìm bộ đề..." />
+
+        <div class="exam-set-scroll-container">
+          <ul class="exam-set-list" id="examSetList">
+            {% for exam in exam_sets %}
+            <li>
+              <div class="exam-set-item-wrapper" id="exam-item-{{ exam.id }}">
+                <a
+                  href="{{ url_for('question.view_exam_set', exam_set_id=exam.id) }}"
+                  class="exam-set-name"
+                >
+                  📘 {{ exam.set_name }}
+                </a>
+                <!-- mới thêm vào-->
+
+                <!-- Nút 3 chấm -->
+                <div
+                  class="more-options-btn"
+                  id="more-btn-{{ exam.id }}"
+                  data-exam-id="{{ exam.id }}"
+                  data-exam-name="{{ exam.set_name }}"
+                >
+                  ⋯
+                </div>
+
+                <!-- Menu lựa chọn -->
+                <div
+                  class="option-menu"
+                  id="option-menu-{{ exam.id }}"
+                  style="display: none"
+                >
+                  <button
+                    onclick="showRenameInput({{ exam.id }}, '{{ exam.set_name }}')"
+                  >
+                    ✏️ Sửa
+                  </button>
+                  <button onclick="deleteExamSet({{ exam.id }})">🗑️ Xóa</button>
+                </div>
+
+                <!-- Input sửa tên -->
+                <div class="rename-popup" id="rename-popup-{{ exam.id }}">
+                  <input
+                    type="text"
+                    id="rename-input-{{ exam.id }}"
+                    value="{{ exam.set_name }}"
+                    class="rename-input"
+                  />
+                  <button class="rename-save-btn" >Lưu</button>
+                  <!-- onclick="submitRename({{ exam.id }})" -->
+                </div>
+              </div>
+
+              <!-- kết thúc thêm vào-->
+            </li>
+            {% else %}
+            <li><i>Không có bộ đề nào</i></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- kết thúc-->
+      <div class="main-content">
+        <div class="question-box">
+          <h1>Sinh Câu Hỏi Từ Bài Giảng</h1>
+
+          <form id="questionForm" method="post" enctype="multipart/form-data">
+            <label for="file">Chọn file bài giảng (PDF/DOCX):</label>
+            <input type="file" id="fileInput" name="file" required />
+            
+             
+            <label>Chọn chế độ sinh câu hỏi:</label>
+            <select id="modeSelect" name="mode" required>
+              <option value="basic">Tự động (Đơn giản)</option>
+              <option value="advanced">Cấu hình nâng cao theo chương</option>
+            </select>
+            <br /><br />
+
+            <div id="basicQuestionWrapper">
+            <label for="tong_so_cau">Số lượng câu hỏi:</label>
+            <select name="tong_so_cau" id="tong_so_cau" class="form-control">
+              <option value="10">10 câu</option>
+              <option value="20">20 câu</option>
+              <option value="30">30 câu</option>
+              <option value="40">40 câu</option>
+              <option value="50" selected>50 câu</option>
+            </select>
+             </div>
+
+            <!-- Chọn chế độ 
+            <label>Chọn chế độ sinh câu hỏi:</label>
+            <select id="modeSelect" name="mode" required>
+              <option value="basic">Tự động (Đơn giản)</option>
+              <option value="advanced">Cấu hình nâng cao theo chương</option>
+            </select>
+            <br /><br />
+             -->
+            <!--
+            <button id="generateBtn" type="submit" disabled>
+              Tải lên và Tạo câu hỏi
+            </button>
+
+            
+            <span id="loadingIndicator" style="display: none">
+              <span class="spinner"></span> Đang sinh câu hỏi sẽ mất một chút
+              thời gian, Mong quý Thầy/Cô vui lòng đợi!
+            </span>
+            -->
+
+            <!-- Checkbox chương -->
+            <div id="chapterCheckboxesContainer">
+              <label>Chọn các chương cần tạo câu hỏi:</label><br />
+              <div id="chapterCheckboxes" style="margin-left: 10px"></div>
+            </div>
+
+            <!-- Advanced config -->
+            <div id="advancedConfig" style="display: none">
+              <div class="advanced-box">
+                <label>Tổng số câu hỏi cần tạo:</label>
+                <input
+                  type="number"
+                  id="totalQuestions"
+                  name="totalQuestions"
+                  min="1"
+                /><br /><br />
+
+                <div id="chapterList"></div>
+
+                <h3>⚙️ Cấu hình số câu hỏi theo chương và mức độ</h3>
+
+                <div class="table-wrapper">
+                  <table id="chapterTable">
+                    <thead>
+                      <tr>
+                        <th>Chương</th>
+                        <th>Dễ</th>
+                        <th>Trung bình</th>
+                        <th>Khó</th>
+                        
+                      </tr>
+                    </thead>
+                    <tbody id="chapterConfig">
+                      <!-- Các dòng chương thêm động -->
+                    </tbody>
+                  </table>
+                </div>
+                 <!--
+                <button type="button" onclick="addChapterRow()">
+                  ➕ Thêm chương
+                </button>
+                -->
+
+              </div>
+              <!-- end .advanced-box -->
+              <br />
+            </div>
+
+            <!-- end #advancedConfig -->
+             <button id="generateBtn" type="submit" disabled>
+              Tải lên và Tạo câu hỏi
+            </button>
+
+            <!-- Loading -->
+            <span id="loadingIndicator" style="display: none">
+              <span class="spinner"></span> Đang sinh câu hỏi sẽ mất một chút
+              thời gian, Mong quý Thầy/Cô vui lòng đợi!
+            </span>
+
+          </form>
+          <!-- ✅ Đóng form ở đúng vị trí -->
+        </div>
+        <!-- end .question-box -->
+      </div>
+
+      <pre
+        id="resultArea"
+        style="background: #f5f5f5; padding: 10px; border: 1px solid #ddd"
+      ></pre>
+
+      <!-- Nút chuyển đến giao diện thống kê -->
+      <!--<button id="toggleRightSidebar" class="toggle-sidebar-right">⚙️</button> -->
+      <div class="statistic-button-container" id="rightSidebar">
+        <a
+          href="{{ url_for('statistical.show_exam_rooms') }}"
+          class="statistic-button"
+          >Thống kê</a
+        >
+
+        <a
+          href="{{ url_for('highschool.create_questions_view') }}"
+          class="btn btn-primary"
+        >
+          ➕ Template THPT
+        </a>
+        <a
+          href="{{ url_for('room_bp.import_exam_questions_xlsx_view') }}"
+          class="btn btn-primary"
+        >
+          ➕ Import câu hỏi từ Excel
+        </a>
+        <a href="{{ url_for('room_bp.exam_ui') }}" class="btn btn-primary"
+          >➕ Tạo Phòng Thi</a
+        >
+        <a href="/progress" class="btn btn-primary"> 📈 Quá trình tiến bộ </a>
+        <a href="{{ url_for('question.view_question_bank') }}" class="btn btn-primary">📚 Xem Ngân Hàng Câu Hỏi</a>
+
+
+        <!-- Mới thêm vào-->
+
+        <div class="upcoming-rooms">
+          <h2>Phòng thi sắp diễn ra</h2>
+          {% if upcoming_rooms %}
+          <ul>
+            {% for room in upcoming_rooms %}
+            <li>
+              <a class="special-link"
+                href="{{ url_for('room_bp.manage_exam_room', room_code=room.room_code) }}"
+              >
+                {{ room.subject_name }} - Mã: {{ room.room_code }}<br />
+                Bắt đầu lúc: {{ room.open_time.strftime('%H:%M %d/%m/%Y') }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p>Không có phòng thi nào sắp diễn ra.</p>
+          {% endif %}
+        </div>
+
+        <!-- Kết thúc thêm vào-->
+        <button id="toggleRightSidebar" class="toggle-sidebar-right"></button>
+      </div>
+      <!-- Nút mở sidebar -->
+
+      <!-- Sidebar trượt từ trên xuống -->
+      <div id="topSidebar" class="top-sidebar">
+        <button id="toggleTopSidebar" class="toggle-top-sidebar">☰</button>
+        <div class="top-sidebar-content">
+          <button onclick="showProfilePopup()" class="user-button">👤 Tôi</button>
+          <button class="logout-button" onclick="if(confirm('Bạn có chắc chắn muốn đăng xuất?')) window.location.href='{{ url_for('auth.logout') }}'">🔒 Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- đoạn này mới thêm vào -->
+
+
+    <!-- Pop-up chỉnh sửa thông tin -->
+<div class="popup-overlay" id="profilePopup">
+  <div class="popup-content">
+    <button class="close-btn" onclick="closeProfilePopup()">✖ Đóng</button>
+    <h2>Thông tin cá nhân</h2>
+    <form method="POST" action="/profile">
+      <label>Email:</label>
+      <input type="email" name="email" id="emailInput" required><br>
+
+      <hr>
+      <h4>Đổi mật khẩu</h4>
+      <label>Mật khẩu cũ:</label>
+      <input type="password" name="old_password"><br>
+
+      <label>Mật khẩu mới:</label>
+      <input type="password" name="new_password"><br>
+
+      <button type="submit" class="save-btn">Lưu thay đổi</button>
+    </form>
+  </div>
+</div>
+
+    <script>
+      // Khi chọn chế độ basic / advanced
+      document
+        .getElementById("modeSelect")
+        .addEventListener("change", function () {
+          const mode = this.value;
+          document.getElementById("advancedConfig").style.display =
+            mode === "advanced" ? "block" : "none";
+        });
+
+      // Thêm 1 dòng chương mới
+      function addChapterRow() {
+        const tbody = document.getElementById("chapterConfig");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+                <td><input type="number"  name="chuong" min="1" required></td>
+                <td><input type="number" id="questionCount" name="de" min="0" value="0" step="1" required></td>
+                <td><input type="number" id="questionCount" name="trung_binh" min="0" value="0" step="1" required></td>
+                <td><input type="number" id="questionCount" name="kho" min="0" value="0" step="1" required></td>
+                <td><button type="button" onclick="this.parentElement.parentElement.remove()">❌ Xoá</button></td>
+            `;
+        tbody.appendChild(row);
+      }
+
+      // Xử lý khi submit form
+      document
+        .getElementById("questionForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const mode = document.getElementById("modeSelect").value;
+          const fileInput = document.getElementById("fileInput");
+          const formData = new FormData();
+          formData.append("file", fileInput.files[0]);
+          formData.append("mode", mode);
+
+          if (mode === "advanced") {
+            const totalQuestions = parseInt(
+              document.getElementById("totalQuestions").value
+            );
+            const chapters = [];
+            const rows = document.querySelectorAll("#chapterTable tr");
+
+            let sumQuestions = 0;
+
+            rows.forEach((row) => {
+              const cells = row.querySelectorAll("td");
+              if (cells.length < 4) return; // bỏ qua nếu chưa đầy đủ
+
+              const chuong = parseInt(cells[0].innerText);
+              const de = parseInt(cells[1].querySelector("input")?.value) || 0;
+              const trung_binh =
+                parseInt(cells[2].querySelector("input")?.value) || 0;
+              const kho = parseInt(cells[3].querySelector("input")?.value) || 0;
+
+              chapters.push({ chuong, de, trung_binh, kho });
+              sumQuestions += de + trung_binh + kho;
+            });
+
+            // Kiểm tra tổng số lượng nhập vào
+            if (sumQuestions !== totalQuestions) {
+              alert(
+                `🚨 Tổng số câu hỏi bạn nhập (${sumQuestions}) KHÔNG bằng tổng cần tạo (${totalQuestions}). Vui lòng kiểm tra lại.`
+              );
+              return;
+            }
+            let selectedChapters = [];
+            const chapterSelect = document.getElementById("chapterSelect");
+            if (chapterSelect) {
+              selectedChapters = Array.from(chapterSelect.selectedOptions).map(
+                (opt) => opt.value
+              );
+            }
+
+            const config = {
+              tong_so_cau: totalQuestions,
+              cau_hoi_theo_chuong: chapters,
+              //chapters_selected: selectedChapters  // <-- dòng mới
+            };
+
+            formData.append("config", JSON.stringify(config));
+          } else if (mode === "basic") {
+            const tongSoCau = parseInt(
+              document.getElementById("tong_so_cau").value
+            );
+            formData.append("tong_so_cau", tongSoCau);
+          }
+
+          // Gửi formData lên server
+
+          try {
+            const response = await fetch("/", {
+              method: "POST",
+              body: formData,
+            });
+
+            const contentType = response.headers.get("content-type");
+            //
+            if (contentType && contentType.includes("application/json")) {
+              const result = await response.json();
+              if (result.redirect_url) {
+                window.location.href = result.redirect_url; // ✅ CHUYỂN HƯỚNG
+              } else {
+                document.getElementById("resultArea").textContent =
+                  JSON.stringify(result, null, 2);
+              }
+            } else {
+              const text = await response.text();
+              document.getElementById("resultArea").textContent =
+                "⚠️ Server trả về HTML hoặc lỗi không phải JSON:\n\n" + text;
+            }
+          } catch (error) {
+            document.getElementById("resultArea").textContent =
+              "🚨 Lỗi khi gửi yêu cầu: " + error;
+          }
+        });
+      // nếu sai thì sửa chỗ này
+      // từ chỗ này là gửi file lên server ngay sau khi chọn
+
+      document
+        .getElementById("modeSelect")
+        .addEventListener("change", function () {
+          const mode = this.value;
+          const file = document.getElementById("fileInput").files[0];
+
+          console.log("📢 Đã chọn chế độ mới:", mode);
+
+          if (mode === "advanced" && file) {
+            console.log("🔁 Đang có file, thực hiện tách chương ngay...");
+            handleExtractChapters(file);
+          }
+        });
+      async function handleExtractChapters(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const extractRes = await fetch("/extract_chapters", {
+            method: "POST",
+            body: formData,
+          });
+
+          const extractResult = await extractRes.json();
+          populateChapterRows(extractResult.chapters);
+
+          console.log(
+            "📩 Server trả về danh sách chương:",
+            extractResult.chapters
+          );
+
+          if (extractResult.chapters?.length > 0) {
+            //console.log('🎨 Gọi hàm populateChapterRows...');
+            //populateChapterRows(extractResult.chapters);
+            console.log("📚 Danh sách chương:", extractResult.chapters);
+          }
+        } catch (err) {
+          console.error("Đã xảy ra lỗi:", err);
+        }
+      }
+
+      function populateChapterRows(chapterList) {
+        const container = document.getElementById("chapterCheckboxes");
+        container.innerHTML = ""; // Xóa checkbox cũ
+
+        // Lặp qua danh sách chương đã tách được (ví dụ ["Chương 1", "Chương 2", ...])
+        chapterList.forEach((ch) => {
+          const match = ch.match(/(\d+)/); // Lấy số chương
+          if (!match) return;
+
+          const chapterNumber = match[1];
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = chapterNumber;
+          checkbox.id = `chapterCheckbox_${chapterNumber}`;
+
+          const label = document.createElement("label");
+          label.htmlFor = checkbox.id;
+          label.innerText = `Chương ${chapterNumber}`;
+
+          checkbox.addEventListener("change", function () {
+            if (this.checked) {
+              addChapterRow(chapterNumber); // Tạo dòng bảng
+            } else {
+              removeChapterRow(chapterNumber); // Xóa dòng bảng
+            }
+          });
+
+          const wrapper = document.createElement("div");
+          wrapper.appendChild(checkbox);
+          wrapper.appendChild(label);
+
+          container.appendChild(wrapper);
+        });
+      }
+
+      // end
+
+      // Hàm thêm dòng chương (mới nhất)
+
+      function addChapterRow(chapterNumber) {
+        const tbody = document.getElementById("chapterTable");
+        if (document.getElementById(`chapterRow_${chapterNumber}`)) return; // Tránh tạo trùng
+
+        const row = document.createElement("tr");
+        row.id = `chapterRow_${chapterNumber}`;
+
+        row.innerHTML = `
+                <td>${chapterNumber}</td>
+                <td><input type="number" name="de" min="0" value="0"></td>
+                <td><input type="number" name="trung_binh" min="0" value="0"></td>
+                <td><input type="number" name="kho" min="0" value="0"></td>
+            `;
+        tbody.appendChild(row);
+      }
+
+      // két thúc thêm dòng chương (mới nhất)
+
+      // hàm xóa dòng chương mới nhất
+      function removeChapterRow(chapterNumber) {
+        const row = document.getElementById(`chapterRow_${chapterNumber}`);
+        if (row) row.remove();
+      }
+
+      // kết thúc hàm xóa dòng chương mới nhất
+
+      //<script>
+      document.getElementById("toggleSidebar").onclick = function () {
+        const sidebar = document.getElementById("sidebarLeft");
+        const mainContent = document.querySelector(".main-content");
+
+        sidebar.classList.toggle("hidden");
+
+        // Nếu sidebar đang bị ẩn thì main content giãn ra
+        if (sidebar.classList.contains("hidden")) {
+          mainContent.classList.add("sidebar-hidden");
+        } else {
+          mainContent.classList.remove("sidebar-hidden");
+        }
+      };
+      // mới thêm vào cho sidebar trên
+
+
+
+
+     document.addEventListener('DOMContentLoaded', function () {
+  const topSidebar = document.getElementById('topSidebar');
+  const toggleBtn = document.getElementById('toggleTopSidebar');
+
+  toggleBtn.addEventListener('click', () => {
+    topSidebar.classList.toggle('visible');
+  });
+});
+
+
+     
+
+      // kết thúc
+
+      document
+        .getElementById("toggleRightSidebar")
+        .addEventListener("click", function () {
+          const sidebar = document.getElementById("rightSidebar");
+          const mainContent = document.querySelector(".main-content");
+
+          sidebar.classList.toggle("active");
+
+          if (sidebar.classList.contains("active")) {
+            // Sidebar đang bị ẩn → main-content nên mở rộng
+            mainContent.classList.remove("shrinked");
+          } else {
+            // Sidebar đang hiện → main-content co lại
+            mainContent.classList.add("shrinked");
+          }
+        });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const input = document.getElementById("searchInput");
+        const list = document.getElementById("examSetList");
+        const originalItems = Array.from(list.children);
+
+        input.addEventListener("input", function () {
+          const keyword = input.value.trim().toLowerCase();
+
+          // Xóa danh sách cũ
+          list.innerHTML = "";
+
+          if (!keyword) {
+            // Nếu trống: hiển thị lại danh sách gốc, bỏ highlight
+            originalItems.forEach((li) => {
+              const link = li.querySelector("a");
+              if (link) {
+                link.innerHTML = link.textContent; // Gỡ bỏ highlight
+              }
+              list.appendChild(li);
+            });
+            return;
+          }
+
+          // Danh sách khớp & không khớp
+          const matched = [];
+          const others = [];
+
+          originalItems.forEach((li) => {
+            const link = li.querySelector("a");
+            const text = link?.textContent.toLowerCase() || "";
+            if (text.includes(keyword)) {
+              const regex = new RegExp(`(${keyword})`, "gi");
+              const highlighted = link.textContent.replace(
+                regex,
+                '<span class="highlight">$1</span>'
+              );
+              link.innerHTML = highlighted;
+              matched.push(li);
+            } else {
+              link.innerHTML = link.textContent; // Bỏ highlight nếu có
+              others.push(li);
+            }
+          });
+
+          // Hiển thị danh sách: matched trước, others sau
+          [...matched, ...others].forEach((li) => list.appendChild(li));
+        });
+      });
+
+      // mới thêm vào sửa tên bộ đề
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // Xử lý click vào nút ba chấm
+        document.querySelectorAll(".more-options-btn").forEach(function (btn) {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation(); // ngăn sự kiện lan ra ngoài
+
+            const examId = btn.dataset.examId;
+
+            // Ẩn các menu khác trước
+            document.querySelectorAll(".option-menu").forEach((menu) => {
+              menu.style.display = "none";
+            });
+
+            // Hiển thị menu tương ứng
+            const targetMenu = document.getElementById(`option-menu-${examId}`);
+            if (targetMenu) {
+              targetMenu.style.display = "block";
+            }
+          });
+        });
+        // Đóng menu khi click ra ngoài
+      });
+
+      // Hàm tạo popup sửa tên
+      function showRenameInput(examId, currentName) {
+        const container = document.getElementById(`exam-item-${examId}`);
+        if (container) {
+          document.querySelectorAll(".option-menu").forEach((menu) => {
+            menu.style.display = "none";
+          });
+
+          showRenamePopup(examId, currentName, container);
+        }
+      }
+      // Nếu click ra ngoài popup thì thu sidebar lại
+      document.addEventListener("click", function (e) {
+        const isInside =
+          e.target.closest(".rename-popup") ||
+          e.target.closest(".more-options-btn") ||
+          e.target.closest(".option-menu");
+
+        if (!isInside) {
+          document
+            .querySelectorAll(".rename-popup")
+            .forEach((p) => (p.style.display = "none"));
+          document
+            .querySelectorAll(".option-menu")
+            .forEach((m) => (m.style.display = "none"));
+          document.querySelector(".sidebar")?.classList.remove("expand");
+          document
+            .querySelector(".main-content")
+            ?.classList.remove("shrinked-left");
+          document
+            .querySelector(".exam-set-scroll-container")
+            ?.classList.remove("expanded");
+        }
+      });
+
+      function showRenamePopup(examId, currentName, container) {
+        const popup = document.getElementById(`rename-popup-${examId}`);
+         const isMobile = window.innerWidth < 768; // 📱 Kiểm tra mobile
+
+        popup.style.display = "block";
+        if (isMobile) {
+        popup.classList.add("rename-modal"); // 📌 Popup giữa màn hình
+    // Không mở rộng sidebar trên mobile
+       } else {
+     popup.style.display = "block";
+          document.getElementById("sidebarLeft")?.classList.add("expand");
+          document
+            .querySelector(".main-content")
+            ?.classList.add("shrinked-left");
+          document
+            .querySelector(".exam-set-scroll-container")
+            ?.classList.add("expanded");
+  }
+
+          // Gán lại giá trị nếu cần
+          const input = popup.querySelector("input.rename-input");
+          if (input) input.value = currentName;
+
+          // Nếu chưa gán sự kiện lưu thì gán
+          const saveBtn = popup.querySelector("button");
+          if (saveBtn && !saveBtn.onclick) {
+            saveBtn.addEventListener("click", function () {
+              const newName = input.value.trim();
+              if (!newName) return alert("Tên không được rỗng!");
+              fetch("/rename-exam-set", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  exam_set_id: examId,
+                  new_name: newName,
+                }),
+              })
+                .then((res) => res.json())
+                .then((data) => {
+                  if (data.status === "success") {
+                    container.querySelector(
+                      ".exam-set-name"
+                    ).textContent = `📘 ${newName}`;
+                    popup.style.display = "none";
+                  } else {
+                    alert("Lỗi: " + data.message);
+                  }
+                })
+                .catch(() => alert("Lỗi kết nối!"));
+            });
+          }
+        
+      }
+     
+
+      // kết thúc sửa tên bộ đề
+    </script>
+    <script>
+      document
+        .getElementById("generateBtn")
+        .addEventListener("click", function () {
+          this.style.display = "none";
+          document.getElementById("loadingIndicator").style.display =
+            "inline-block";
+        });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const fileInput = document.getElementById("fileInput");
+        const modeSelect = document.getElementById("modeSelect");
+        const totalQuestionsInput = document.getElementById("tong_so_cau");
+        const advTotalQuestions = document.getElementById("totalQuestions");
+        const generateBtn = document.getElementById("generateBtn");
+        const basicWrapper = document.getElementById("basicQuestionWrapper");
+        const chapterContainer = document.getElementById("chapterCheckboxesContainer");
+
+        function updateFormState() {
+      const fileSelected = fileInput.files.length > 0;
+      const mode = modeSelect.value;
+      const basicQuestionCountFilled = totalQuestionsInput.value.trim() !== "";
+      const advQuestionCountFilled = advTotalQuestions.value.trim() !== "";
+
+    modeSelect.disabled = !fileSelected;
+    generateBtn.disabled = true;
+
+    if (mode === "advanced") {
+      basicWrapper.style.display = "none";
+      chapterContainer.style.display = "block";
+      if (fileSelected && advQuestionCountFilled) {
+        generateBtn.disabled = false;
+      }
+    } else {
+      basicWrapper.style.display = "block";
+      chapterContainer.style.display = "none";
+      if (fileSelected && basicQuestionCountFilled) {
+        generateBtn.disabled = false;
+      }
+    }
+  }
+
+        // Khi chọn file → cập nhật trạng thái form
+        fileInput.addEventListener("change", updateFormState);
+
+        // Khi chọn chế độ
+        modeSelect.addEventListener("change", updateFormState);
+
+        // Khi điền số lượng câu hỏi
+        totalQuestionsInput.addEventListener("input", updateFormState);
+        advTotalQuestions.addEventListener("input", updateFormState);
+
+        // Ban đầu: disable chế độ và nút sinh
+        modeSelect.disabled = true;
+        generateBtn.disabled = true;
+
+        // Khởi động cập nhật
+        updateFormState();
+      });
+    </script>
+
+    <script>
+  function showProfilePopup() {
+    document.getElementById("profilePopup").style.display = "block";
+  }
+
+  function closeProfilePopup() {
+    document.getElementById("profilePopup").style.display = "none";
+  }
+
+  
+</script>
+<script>
+  document.getElementById("questionForm").addEventListener("submit", function (e) {
+    const input = document.getElementById("questionCount");
+    const value = input.value.trim();
+
+    // Nếu không phải số nguyên dương → báo lỗi
+    if (!/^\d+$/.test(value) || parseInt(value) <= 0) {
+      alert("⚠️ Vui lòng nhập số nguyên dương (không âm, không thập phân, không ký tự).");
+      e.preventDefault(); // ❌ Chặn gửi form
+      input.focus();
+    }
+  });
+
+  // Chặn nhập dấu trừ (-), dấu chấm (.)
+  document.getElementById("questionCount").addEventListener("keypress", function (e) {
+    const invalidChars = ["-", ".", "e", "+"]; // chặn thêm cả ký hiệu mũ
+    if (invalidChars.includes(e.key)) {
+      e.preventDefault();
+    }
+  });
+</script>
+
+
+
+  </body>
+</html>

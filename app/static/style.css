@@ -1,0 +1,1030 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Arial', sans-serif;
+    background-color: #ffffff;
+}
+
+.layout-wrapper {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 290px;
+  height: 100vh;
+  background-color: #d3e4ff;
+  padding: 30px 20px; /* tăng padding trên và dưới */
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+  z-index: 998;
+  box-sizing: border-box; /* đảm bảo padding không làm tăng chiều cao */
+
+}
+.sidebar.hidden {
+  transform: translateX(-100%);
+}
+.toggle-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 1000;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.toggle-btn:hover {
+    background-color: #0056b3;
+}
+.toggle-sidebar-left {
+  position: absolute;
+  top: 50%;
+  right: -12px; /* đẩy nút ra ngoài mép phải của sidebar */
+  transform: translateY(-50%);
+  width: 12px;
+  height: 80px;
+  font-size: 18px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  padding: 0;
+}
+
+.toggle-sidebar-left::before {
+  content: "≡";
+  font-size: 18px;
+  transform: rotate(90deg); /* xoay ngang thành dọc */
+  display: inline-block;
+}
+
+/* Khi sửa tên, sidebar mở rộng */
+.sidebar.expand {
+  width: 600px; /* hoặc lớn hơn tùy input */
+  transition: width 0.3s ease;
+}
+
+/* Main content co lại khi sidebar mở rộng */
+.main-content.shrinked-left {
+  margin-left: 200px; /* tương ứng với sidebar */
+  
+  transition: margin-left 0.3s ease;
+}
+
+.exam-set-scroll-container.expanded {
+  width: 100% ;
+  transition: width 0.3s ease;
+}
+
+
+
+
+
+
+.sidebar h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.exam-set-list {
+    list-style: none;
+    padding: 0;
+}
+
+.exam-set-list li {
+     margin-bottom: 12px;
+     width: 275px;
+}
+
+.exam-set-list a {
+    display: block;
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.exam-set-list a:hover {
+    background-color: #cce0ff;
+}
+
+/* Main content */
+.main-content {
+    
+    flex: 1;
+    max-width: 90%;
+    margin-top: 10px;
+    
+    height: 100vh;
+
+    padding: 40px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    margin-left: 120px;
+    margin-right: 70px;
+}
+.main-content.sidebar-hidden {
+  margin-left: 0; /* Khi sidebar ẩn */
+}
+
+#chapterCheckboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 100%;
+}
+#chapterCheckboxes label {
+  display: inline-block;
+  width: 200px;
+}
+
+
+
+.main-content.shrinked {
+  margin-right: 80px; /* co lại đúng bằng chiều rộng sidebar */
+  transition: margin-right 0.3s ease;
+}
+
+.question-box {
+    background-color: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: visible;
+    flex-direction: column;
+}
+
+.question-box h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.question-box label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="file"],
+select,
+input[type="number"] {
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+pre {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 10px;
+    overflow: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th, td {
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background-color: #e6f0ff;
+}
+.sidebar.collapsed {
+    width: 60px;
+    overflow: hidden;
+    padding: 10px;
+}
+
+.sidebar.collapsed h3,
+.sidebar.collapsed a {
+    display: none;
+}
+/* Ô tìm kiếm trong sidebar */
+.sidebar input#searchInput {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    box-sizing: border-box;
+    font-size: 14px;
+    background-color: #fff;
+}
+
+/* Highlight phần khớp */
+.highlight {
+    background-color: #99FFFF;
+    font-weight: bold;
+}
+
+
+:root {
+  --sidebar-width: 250px;
+  --toggle-width: 30px;
+}
+
+/* Khi bấm nút toggle: thêm class active để hiển thị */
+#rightSidebar.active {
+  right: 0; /* Trượt vào trong, cách mép phải 20px */
+}
+
+.statistic-button-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 260px;
+  height: 100vh;
+  background: #d4f6ff;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  padding-top: 24px; 
+  box-sizing: border-box;
+  
+  }
+.statistic-button-container.active {
+  transform: translateX(100%);
+  
+}
+
+  .statistic-button-container a {
+   
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    min-width: 250px;
+    text-align: center;
+  }
+
+  a.statistic-button {
+  display: block;
+  background-color:#99FFFF;
+  width: 40px;               /* ✅ Chiếm toàn bộ chiều ngang sidebar */
+  padding: 10px 16px;        /* ✅ Khoảng đệm trong nút */      /* ✅ Khoảng cách giữa các nút */
+  text-align: center;        /* ✅ Căn giữa chữ */
+  border-radius: 20px;        /* ✅ Bo tròn đều */
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;     /* ✅ Bỏ gạch chân */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: background-color 0.3s ease;
+  box-sizing: border-box;
+  margin: 0 auto 12px auto; /* 👈 Căn giữa theo chiều ngang */
+  }
+
+  .statistic-button:hover {
+    background-color: #45a049;
+  }
+
+  .btn.btn-primary {
+  display: block;
+  background-color:#99FFFF;
+  width: 40px;               /* ✅ Chiếm toàn bộ chiều ngang sidebar */
+  padding: 8px 12px;        /* ✅ Khoảng đệm trong nút */
+  margin: 0 auto 12px auto; /* 👈 Căn giữa theo chiều ngang */       /* ✅ Khoảng cách giữa các nút */
+  text-align: center;        /* ✅ Căn giữa chữ */
+  border-radius: 20px;        /* ✅ Bo tròn đều */
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;     /* ✅ Bỏ gạch chân */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: background-color 0.3s ease;
+  box-sizing: border-box;
+  }
+  .btn.btn-primary:first-child {
+  margin-top: 24px; /* hoặc 32px nếu bạn muốn thoáng hơn */
+}
+
+
+  .btn.btn-primary:hover {
+    background-color: #0056b3;
+  }
+
+.exam-set-scroll-container {
+    flex-grow: 1; /* Cho phép nó mở rộng để chiếm không gian còn lại */
+    min-width: 250px;
+    width: auto;
+    max-width: 100%;
+    height: 500px;
+    color: rgb(180, 175, 175);
+    /* Ví dụ cụ thể hơn nếu bạn biết các thành phần khác chiếm bao nhiêu không gian */
+    /* Giả sử h3 + input + margin/padding chiếm khoảng 100px */
+    /* max-height: calc(100vh - 150px); */ /* Điều chỉnh 150px cho phù hợp */
+    overflow-y: auto; /* Thêm thanh cuộn dọc nếu nội dung bị tràn */
+    padding-right: 10px; /* Thêm padding để tránh thanh cuộn che khuất nội dung */
+    overflow-x: visible;
+}
+
+.toggle-right-panel {
+  margin-bottom: 10px;
+  float: right;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.toggle-sidebar-right {
+  position: absolute;
+  top: 50%;
+  left: -12px; /* đẩy nút ra ngoài mép trái của sidebar */
+  transform: translateY(-50%);
+  background-color: #4eeaff;
+  border: none;
+  border-radius: 15px 0 0 15px;
+  width: 12px; /* mỏng hơn */
+  height: 80px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.toggle-sidebar-right::before {
+  content: "≡";
+  transform: rotate(90deg); /* xoay ngang thành dọc */
+  display: inline-block;
+}
+
+.statistic-button-container.active + .toggle-sidebar-right {
+  right: 0;
+}
+.toggle-sidebar-right:hover {
+  background-color: #36d4e6;
+}
+
+#advancedConfig {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+}
+
+.advanced-box {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.table-container {
+  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#chapterTable {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+#chapterTable th,
+#chapterTable td {
+  padding: 8px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+input[type="number"] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
+
+
+.exam-set-item-wrapper {
+  background-color: #c5fcff;
+  padding: 4px 10px; /* ↓ chiều cao */
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
+  position: relative;
+  width: 100%;
+  max-width: none; /* Cho nó kéo dài hết sidebar */
+  min-height: 36px; /* hẹp xuống */
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.more-options-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: white;
+  color: #555;
+  font-weight: bold;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.exam-set-item-wrapper:hover .more-options-btn {
+  display: flex; /* hiện khi hover */
+}
+
+.more-options-btn:hover {
+  background-color: #e0e0e0;
+}
+
+
+
+
+/* Option menu (sửa / xóa) */
+.option-menu {
+  position: absolute;
+  top: 50%;
+  right: 45px;
+  transform: translateY(-50%);
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding: 5px;
+  z-index: 10;
+}
+a.exam-set-name {
+  height: 25px;
+  background-color: white;
+  padding: 6px 10px;
+  border-radius: 60px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #333;
+  width: 200px; /* ⭐ Giảm chiều ngang */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.option-menu button {
+  display: block;
+  background: none;
+  border: none;
+  color: #333;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.option-menu button:hover {
+  background-color: #f0f0f0;
+}
+
+/* Popup đổi tên */
+.rename-popup {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  z-index: 9999;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+ 
+}
+
+.rename-input {
+  padding: 5px 10px;
+  border-radius: 15px;
+  border: 1px solid #ccc;
+  width: 180px;
+  outline: none;
+  
+}
+
+.rename-popup button {
+  margin-left: 10px;
+  padding: 5px 10px;
+  background-color: #5bc0de;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+
+.rename-popup button:hover {
+  background-color: #31b0d5;
+}
+.upcoming-rooms {
+  background-color: #fff;
+  border-radius: 16px; 
+  width: 90%;    
+  height: 330px;    /* ✅ Bo góc toàn khối */
+  padding: 16px 20px;
+  margin: 20px auto 0 auto; /* 👈 Căn giữa theo chiều ngang */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-sizing: border-box;
+  overflow-y: auto; /* 👈 Thêm scroll dọc khi nội dung vượt quá */
+
+}
+.upcoming-rooms ul {
+  list-style: none;           /* ✅ Bỏ chấm đầu dòng */
+  padding: 0;
+  margin: 0;
+}
+
+.upcoming-rooms li {
+  margin-bottom: 12px;
+  width: 200px;
+  display: flex;
+  justify-content: center; 
+}
+
+
+.upcoming-rooms a {
+
+  min-width: auto !important;
+
+  display: block;
+  
+  width: 95% ;
+  max-width: 195px;
+  box-sizing: border-box; 
+  
+                 
+  margin: 0 auto;
+  padding: 10px 14px;
+  background-color: #f1f1f1;
+  border-radius: 10px;        /* ✅ Bo góc từng nút */
+  border: 1px solid #ccc;     /* ✅ Viền mảnh */
+  text-decoration: none;
+  color: #8d8b8d;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: background-color 0.2s ease-in-out;
+}
+.special-link {
+  display: block;
+  
+  width: 60% ;
+  max-width: 150px;
+  box-sizing: border-box; 
+                 
+  margin: 0 auto;
+  padding: 10px 14px;
+  background-color: #f1f1f1;
+  border-radius: 10px;        /* ✅ Bo góc từng nút */
+  border: 1px solid #ccc;     /* ✅ Viền mảnh */
+  text-decoration: none;
+  color: #8d8b8d;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: background-color 0.2s ease-in-out;
+}
+
+
+.upcoming-rooms a:hover {
+  background-color: #fad2d2;
+}
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+/* đoạn này thêm vào để responsive */
+
+@media (max-width: 768px) {
+  /* --- Sidebar trái --- */
+  body {
+  background-color: #f9fafb;
+  font-family: "Open Sans", sans-serif;
+  color: #1f2937;
+}
+  .sidebar {
+    transform: translateX(0); /* Mặc định là hiện */
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.hidden {
+    transform: translateX(calc(-100% + 12px)); /* ✅ Khi có .hidden thì ẩn, chừa lại nút */
+  }
+
+  .toggle-sidebar-left {
+    position: absolute;
+    top: 50%;
+    right: -12px;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 80px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+  }
+
+  .toggle-sidebar-left::before {
+    content: "≡";
+    transform: rotate(90deg);
+  }
+
+
+  
+  /* --- Sidebar phải --- */
+  .statistic-button-container {
+    transform: translateX(calc(100% - 12px)); /* ⭐ chừa lại 12px bên phải */
+    transition: transform 0.3s ease;
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 260px;
+    height: 100vh;
+    z-index: 1000;
+  }
+
+  .statistic-button-container.active {
+    transform: translateX(0);
+  }
+
+  /* --- Nút toggle luôn hiển thị --- */
+  
+  .toggle-sidebar-right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 80px;
+    font-size: 18px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    padding: 0;
+  }
+
+  
+  .toggle-sidebar-right::before {
+    content: "≡";
+    transform: rotate(90deg);
+    font-size: 16px;
+  }
+
+  .toggle-sidebar-right {
+    left: -12px;
+    border-radius: 10px 0 0 10px;
+    background-color: #4eeaff;
+  }
+
+  /* Main content full width, không co lại */
+  .main-content {
+    margin: 0 !important;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+ .question-box {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+  max-width: 460px;
+  margin: auto;
+  box-sizing: border-box;
+}
+
+.question-box h1 {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 24px;
+  color: #111827;
+}
+
+.question-box label {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.question-box input[type="file"],
+.question-box input[type="number"],
+.question-box select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+.question-box input::file-selector-button {
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  color: #6366f1;
+  cursor: pointer;
+}
+
+.question-box button {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  background: linear-gradient(to right, #7c3aed, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.question-box button:hover {
+  opacity: 0.9;
+}
+#loadingIndicator {
+  font-size: 14px;
+  color: #888;
+  margin-top: 8px;
+  text-align: center;
+}
+.form-control {
+  width: 180px;
+  max-width: 240px;
+}
+.sidebar.expand {
+    width: 100% !important;
+    z-index: 999;
+  }
+  .main-content.shrinked-left {
+    display: none; /* hoặc opacity: 0 */
+  }
+
+
+}
+
+
+
+.profile-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 999;
+}
+
+.popup-overlay {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.popup-content {
+  background: white;
+  max-width: 400px;
+  width: 90%;
+  margin: 10vh auto;
+  padding: 20px;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  animation: popupFadeIn 0.3s ease-in-out;
+}
+
+@keyframes popupFadeIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.popup-content input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.popup-content .save-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.popup-content .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+
+/*css n ày mới thêm vào cho sidebar trên*/
+
+
+
+/* Top Sidebar */
+.top-sidebar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -100%); /* translate X để canh giữa, Y để ẩn */
+  width: 320px; /* ✅ chỉnh chiều rộng tại đây */
+  height: 50px;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  border-radius: 0 0 20px 20px;
+  overflow: visible;
+}
+
+/* Khi sidebar mở */
+.top-sidebar.visible {
+  transform: translate(-50%, 0); /* hiện xuống và vẫn giữ canh giữa */
+}
+
+/* Toggle Button – giống toggle ở sidebar phải */
+.toggle-top-sidebar {
+  position: absolute;
+  bottom: -20px; /* nhô ra ngoài cạnh dưới của top sidebar */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f3fbfc;
+  border: none;
+  border-radius: 10px 10px 10px 10px;
+  width: 100px;
+  height: 15px;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 1001;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sidebar content buttons */
+.top-sidebar-content button {
+  margin: 0 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 2px solid #007bff; /* 👈 Viền màu xanh dương */
+  color: white;
+  background-color: #007bff;
+  cursor: pointer;
+  
+  
+}
+.top-sidebar-content button:hover {
+  background-color: #f57023; /* màu xanh đậm hơn khi hover */
+  transform: translateY(-1px); /* nhấc nhẹ nút lên */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border-color: #c40808;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

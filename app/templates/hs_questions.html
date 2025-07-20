@@ -1,0 +1,19 @@
+<!-- templates/generate_thpt_exam.html -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Sinh đề thi THPT</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='hs_questions.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Sinh đề thi THPT</h1>
+    <form id="uploadForm" action="{{ url_for('highschool.generate_hs_questions') }}" method="POST" enctype="multipart/form-data">
+      <label for="file">Chọn file bài giảng (. hoặc .docx):</label>
+      <input type="file" name="file" id="file" accept=".pdf,.docx" required>
+      <button type="submit">Tạo đề thi</button>
+    </form>
+  </div>
+</body>
+</html>

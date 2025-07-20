@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Chỉnh sửa câu hỏi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='edit_questions.css') }}" >
+</head>
+<body>
+  <div class="container">
+    <h2>📋 Chỉnh sửa câu hỏi trong bộ đề</h2>
+    <form id="update-exam-set-form">
+      <label for="set_name">Tên bộ đề:</label>
+      <input type="text" id="set_name" name="set_name" value="{{ exam_set.set_name }}" required />
+
+      <label for="subject_name">Môn học:</label>
+      <input type="text" id="subject_name" name="subject_name" value="{{ exam_set.subject_name }}" required/>
+    <button type="submit">💾 Lưu thông tin bộ đề</button>
+    </form>
+    <button id="check-duplicate-btn">🔍 Kiểm tra câu hỏi trùng</button>
+
+    
+
+  
+
+    <form method="POST">
+      {% for question in questions %}
+      <div class="question-block" data-question-id="{{ question.id }}">
+        <input type="hidden" name="question_ids" value="{{ question.id }}">
+
+        <label for="question_{{ question.id }}">Câu: {{ loop.index }}</label>
+        <textarea class="textq" name="question_{{ question.id }}" id="question_{{ question.id }}" required>{{ question.question_text }}</textarea>
+
+        <div class="options">
+          {% for i in range(4) %}
+          <div class="option">
+            <label for="option_{{ question.id }}_{{ i }}">Đáp án {{ 'ABCD'[i] }}:</label>
+            <textarea
+            name="option_{{ question.id }}_{{ i }}"
+            id="option_{{ question.id }}_{{ i }}"
+            required
+            rows="3"
+            style="width: 100%; white-space: pre-wrap;"
+            >{{ question.answer[i] }}</textarea>
+
+          </div>
+          {% endfor %}
+        </div>
+
+        <label for="correct_{{ question.id }}">Đáp án đúng:</label>
+        <select name="correct_{{ question.id }}" id="correct_{{ question.id }}">
+          {% for choice in 'ABCD' %}
+          <option value="{{ choice }}" {% if question.correct_answer == choice %}selected{% endif %}>{{ choice }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="actions">
+          <button 
+            formaction="{{ url_for('question.update_question', question_id=question.id) }}" 
+            formmethod="POST">💾 Cập nhật</button>
+
+          <button 
+            formaction="{{ url_for('question.delete_question', question_id=question.id) }}" 
+            formmethod="POST"
+            class="delete-btn"
+            onclick="return confirm('Bạn có chắc chắn muốn xóa câu hỏi này không?');">🗑️ Xóa</button>
+        </div>
+      </div>
+      {% endfor %}
+      
+    </form>
+    <button type="button" onclick="confirmAndGenerateExams()">Tạo mã đề</button>
+      <p id="status" style="margin-top: 10px; color: green;"></p>
+
+      <label for="num_versions">Số mã đề:</label>
+    <select id="num_versions">
+    <option value="2">2 mã đề</option>
+    <option value="3">3 mã đề</option>
+    <option value="4" selected>4 mã đề</option>
+    </select>
+
+  </div>
+  <script>
+    function confirmAndGenerateExams() {
+        const confirmation = confirm("Hãy chắc chắn câu hỏi gốc đã ưng ý trước khi tạo mã đề.\nBạn có sẵn sàng tạo mã đề chưa?");
+        if (!confirmation) return;
+
+        const userId = {{ user_id }};
+        const examSetId = {{ exam_set_id }};
+        
+        const formData = new FormData();
+        formData.append("user_id", userId);
+        formData.append("exam_set_id", examSetId);
+        const numVersions = parseInt(document.getElementById("num_versions").value);
+
+        fetch('/generate-exams', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                // Redirect đến trang chi tiết bộ đề
+                window.location.href = `/exam_set/${examSetId}`;
+            } else {
+                document.getElementById("status").innerText = "❌ " + data.message;
+            }
+        })
+        .catch(err => {
+            document.getElementById("status").innerText = "⚠️ Lỗi: " + err;
+        });
+    }
+
+// đoạn này là validations
+
+function containsEmoji(text) {
+  return /[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/u.test(text);
+}
+
+function preventEmojiInput(event) {
+  if (containsEmoji(event.target.value)) {
+    // Xóa emoji vừa nhập
+    event.target.value = event.target.value.replace(/[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, '');
+    
+    // Hiển thị cảnh báo nhỏ nếu muốn
+    if (!event.target.nextElementSibling || !event.target.nextElementSibling.classList.contains('emoji-error')) {
+      const msg = document.createElement('div');
+      msg.innerText = '❌ Không được nhập emoji.';
+      msg.className = 'emoji-error';
+      msg.style.color = 'red';
+      msg.style.fontSize = '0.85em';
+      msg.style.marginTop = '4px';
+      event.target.parentNode.appendChild(msg);
+
+      // Tự xóa sau 2s
+      setTimeout(() => msg.remove(), 2000);
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const inputs = document.querySelectorAll('input[type="text"], textarea');
+  inputs.forEach(input => {
+    input.addEventListener('input', preventEmojiInput);
+  });
+});
+
+</script>
+
+<script>
+document.getElementById("update-exam-set-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const examSetId = {{ exam_set_id }};
+
+  fetch(`/update-exam-set-info/${examSetId}`, {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || "Cập nhật xong!");
+  })
+  .catch(err => {
+    alert("Có lỗi xảy ra khi cập nhật.");
+    console.error(err);
+  });
+});
+</script>
+
+<script>
+document.getElementById("check-duplicate-btn").addEventListener("click", function () {
+  fetch("/check-duplicate-questions/{{ exam_set_id }}")
+    .then(res => res.json())
+    .then(data => {
+      const dupMap = new Map();
+      data.duplicates.forEach(pair => {
+        dupMap.set(pair.id_1, true);
+        dupMap.set(pair.id_2, true);
+      });
+
+      document.querySelectorAll(".question-block").forEach(block => {
+        const qid = parseInt(block.dataset.questionId);
+        if (dupMap.has(qid)) {
+          block.classList.add("duplicate-question");
+        } else {
+          block.classList.remove("duplicate-question");
+        }
+      });
+
+      alert(`🔍 Phát hiện ${data.count} cặp câu hỏi trùng.`);
+    })
+    .catch(err => {
+      alert("Lỗi khi kiểm tra trùng câu hỏi.");
+      console.error(err);
+    });
+});
+</script>
+
+</body>
+</html>

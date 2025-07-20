@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thống kê tiến bộ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='progress.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar" id="sidebar">
+      <h2 id="sidebar-title">Danh sách lớp</h2>
+      <ul id="sidebar-list"></ul>
+    </aside>
+
+    <main class="chart-area">
+      <canvas id="progressChart"></canvas>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+  const sidebarList = document.getElementById("sidebar-list");
+  const sidebarTitle = document.getElementById("sidebar-title");
+  let chart;
+
+  // Load danh sách lớp ban đầu
+  fetch("/classes")
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        renderClassList(data.classes);
+      }
+    });
+
+  window.renderClassList = function (classes) {
+    sidebarList.innerHTML = "";
+    sidebarTitle.textContent = "Danh sách lớp";
+
+
+    classes.forEach(cls => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${cls.class_name}</span>
+        <button onclick="loadStudentDetail('${cls.class_name}')">Chi tiết</button>
+      `;
+      li.addEventListener("click", () => loadClassProgress(cls.class_name));
+      sidebarList.appendChild(li);
+    });
+  }
+
+  function loadClassProgress(className) {
+    fetch(`/progress/class/${className}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const labels = data.progress.map(p => formatDate(p.exam_time));
+          const scores = data.progress.map(p => p.avg_score);
+          updateChart(labels, scores, `Tiến độ lớp ${className}`);
+        }
+      });
+  }
+
+  window.loadStudentDetail = function (className) {
+    fetch(`/students-in-class/${className}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          sidebarTitle.innerHTML = `
+            <button onclick="backToClassList()" style="margin-right: 10px;">⬅</button>
+            Lớp: ${className}
+            `;
+          renderStudentList(data.students, className);
+        }
+      });
+  };
+
+  function renderStudentList(students, className) {
+    sidebarList.innerHTML = "";
+    students.forEach(st => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${st.full_name}</span>
+        <button onclick="loadStudentProgress('${st.student_id}', '${st.full_name}')">Chi tiết</button>
+      `;
+      li.addEventListener("click", () => loadStudentProgress(st.student_id, st.full_name));
+      sidebarList.appendChild(li);
+    });
+  }
+
+  window.loadStudentProgress = function (studentId, name) {
+    fetch(`/progress/student/${studentId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const labels = data.progress.map(p => formatDate(p.exam_time));
+          const scores = data.progress.map(p => p.score);
+          updateChart(labels, scores, `Tiến độ: ${name}`);
+        }
+      });
+  };
+
+  function updateChart(labels, data, label) {
+    const ctx = document.getElementById("progressChart").getContext("2d");
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: data,
+          fill: false,
+          borderColor: "#36A2EB",
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, max: 10 }
+        }
+      }
+    });
+  }
+
+  function formatDate(iso) {
+    const date = new Date(iso);
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  }
+});
+  window.backToClassList = function () {
+    fetch("/classes")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          renderClassList(data.classes);
+        }
+      });
+  };
+
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f9f9f9;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 960px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.page-title {
+  text-align: center;
+  color: #333;
+}
+
+.filter-bar {
+  background: #e7faff;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-bar input[type="text"],
+.filter-bar input[type="date"] {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.filter-bar button {
+  padding: 6px 14px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#toggle-details-btn {
+  background: #007bff;
+  color: white;
+  padding: 8px 16px;
+  margin-bottom: 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.room-details {
+  background: #e6f0ff;
+  padding: 15px;
+  border: 1px solid #cce0ff;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.student-list-title {
+  margin-top: 20px;
+}
+
+.student-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.student-card {
+  background: #ffffcc;
+  padding: 12px 20px;
+  border-radius: 10px;
+  width: calc(50% - 15px);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.student-card:hover {
+  background: #fff89a;
+  transform: scale(1.02);
+}
+
+.student-name {
+  font-weight: bold;
+}
+
+.student-code {
+  font-size: 0.95em;
+  color: #666;
+}
+.export-link {
+  display: inline-block;
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-decoration: none;
+  margin-top: 10px;
+}
+
+.export-link:hover {
+  background-color: #45a049;
+}
+
+
+
+@media (max-width: 576px) {
+  .container {
+    padding: 15px;
+  }
+
+  .page-title,
+  .student-list-title {
+    text-align: center;
+    font-size: 1.3em;
+    margin-bottom: 15px;
+  }
+
+  .filter-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .filter-bar input[type="text"],
+  .filter-bar input[type="date"],
+  .filter-bar button {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+  }
+
+  #toggle-details-btn {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 1em;
+  }
+
+  .room-details {
+    font-size: 0.95em;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .room-details p {
+    margin-bottom: 6px;
+  }
+
+  .room-details .btn {
+    width: 100%;
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 1em;
+  }
+
+  .student-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .student-card {
+    padding: 12px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+  }
+
+  .student-name,
+  .student-code {
+    font-size: 0.95em;
+    margin: 0;
+  }
+}
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  position: relative;
+}
+.close-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+

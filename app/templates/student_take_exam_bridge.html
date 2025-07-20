@@ -1,0 +1,11 @@
+<form id="autoForm" method="POST" action="/take-exam/{{ room_code }}">
+    <input type="hidden" name="student_name" value="{{ student_name }}">
+    <input type="hidden" name="student_code" value="{{ student_code }}">
+    <input type="hidden" name="room_code" value="{{ room_code }}">
+    <input type="hidden" name="exam_code" value="{{ exam_code }}">
+  </form>
+  
+  <script>
+    document.getElementById("autoForm").submit();
+  </script>
+  

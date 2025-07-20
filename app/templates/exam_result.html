@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết Quả Bài Thi</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; text-align: center; padding: 50px; }
+        .result-box {
+            background: white; padding: 30px; border-radius: 10px; max-width: 400px;
+            margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 { color: #333; }
+        p { font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="result-box">
+        <h2>Kết Quả Bài Thi</h2>
+        <p><strong>Số câu đúng:</strong> {{ correct  }} / {{ total }}</p>
+        <p><strong>Điểm:</strong> {% if total > 0 %}
+        {{ "%.2f"|format(score) }} / 10
+    {% else %}
+        Không thể tính điểm (tổng số câu bằng 0)
+    {% endif %}</p>
+    </div>
+
+<script>
+  // Ngăn quay lại bằng nút Back
+  window.history.pushState(null, "", window.location.href);
+  window.onpopstate = function () {
+      window.history.pushState(null, "", window.location.href);
+      alert("Bạn không thể quay lại sau khi đã nộp bài.");
+  };
+</script>
+
+</body>
+</html>

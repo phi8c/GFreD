@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Import Đề Thi từ Excel</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='handle_insert_quesions.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Tải lên file Excel đề thi (MCQ)</h1>
+
+      <div class="note">
+        <strong>Lưu ý về cấu trúc file Excel:</strong><br />
+        File Excel phải có các cột sau (tiêu đề chính xác, viết hoa chữ cái
+        đầu):<br />
+        - "Nội dung câu hỏi" (bắt buộc)<br />
+        - "Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D" (bắt buộc)<br />
+        - "Đáp án đúng" (bắt buộc, ví dụ: A, B, C, D)<br />
+        - "Mức độ khó" (tùy chọn, kiểu số nguyên, ví dụ: 1, 2, 3...)<br />
+        - "Chapter" (tùy chọn, kiểu số nguyên, ví dụ: 1, 2, 3...)<br />
+        <br />
+        Đối với "Mức độ khó" và "Chapter", nếu bạn để trống ô trong Excel, giá
+        trị sẽ được lưu là NULL trong database.
+      </div>
+
+      {# Hiển thị thông báo Flash từ Flask #} {% with messages =
+      get_flashed_messages(with_categories=true) %} {% if messages %}
+      <ul class="flashes">
+        {% for category, message in messages %}
+        <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %} {% endwith %}
+
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{{ url_for('room_bp.import_exam_questions_xlsx_view') }}"
+      >
+        <div>
+          <label for="exam_set_name"
+            >Tên bộ đề: <span class="required-star">*</span></label
+          >
+          <input
+            type="text"
+            id="exam_set_name"
+            name="set_name"
+            placeholder="VD: Giữa kỳ Toán 11"
+            required
+          />
+          <small>*(Bộ đề mới sẽ được tạo từ tên này.)*</small>
+        </div>
+
+        
+
+        <div>
+          <label for="file"
+            >Chọn file Excel (.xlsx):
+            <span class="required-star">*</span></label
+          >
+          <input type="file" name="file" id="file" accept=".xlsx" required />
+        </div>
+
+        <button type="submit">Import Câu Hỏi</button>
+      </form>
+    </div>
+  </body>
+</html>

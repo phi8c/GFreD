@@ -1,0 +1,690 @@
+/* General Styling */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%; /* Đảm bảo cả html và body chiếm 100% chiều rộng */
+    overflow-x: hidden; /* Quan trọng: Ngăn cuộn ngang nếu có overflow do các hiệu ứng */
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #f4f7f6;
+    color: #333;
+    overflow-x: hidden; /* Prevent horizontal scroll from animations */
+}
+/* Áp dụng cho tất cả các thẻ 'a' nếu bạn muốn */
+
+
+/* Cụ thể hơn cho các link trong header của bạn */
+.custom-header .nav-link-custom {
+    text-decoration: none; /* Dòng này sẽ loại bỏ đường gạch chân */
+    color: white; /* Màu chữ đã thiết lập trước đó */
+    margin-left: 30px;
+    font-weight: 500;
+    font-size: 1.1em;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.custom-header .nav-link-custom:hover {
+    color: #ffad6a;
+    transform: translateY(-2px);
+}
+
+/* Nếu bạn muốn logo cũng không có gạch chân (vì nó cũng là thẻ <a>) */
+.custom-header a { /* Hoặc .custom-header .brand-logo-link nếu bạn đã đổi tên */
+    text-decoration: none;
+}
+.custom-header .logo-text {
+    display: flex; /* Dùng flexbox để căn giữa icon và text nếu cả hai cùng tồn tại */
+    align-items: center;
+    gap: 10px; /* Khoảng cách giữa icon và text */
+    font-size: 1.8em; /* Kích thước chữ logo nếu vẫn giữ */
+    font-weight: 700;
+    color: white;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+    font-family: 'Montserrat', sans-serif;
+    
+}
+
+/* CSS cho icon */
+.custom-header .header-logo-icon {
+    height: 30px; /* Điều chỉnh chiều cao icon cho vừa với header */
+    width: auto; /* Giữ tỉ lệ */
+    vertical-align: middle; /* Căn chỉnh với text nếu có */
+    /* Bạn có thể thêm filter: brightness(1.2); nếu icon màu tối muốn làm sáng lên */
+    max-height: 40px;
+}
+
+/* Các link điều hướng vẫn giữ nguyên */
+
+.section {
+    min-height: 100vh; /* Each section takes full viewport height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+    text-align: center;
+    position: relative;
+    overflow: hidden; /* Hide overflowing elements during animation */
+}
+
+.section:nth-child(even) {
+    background-color: #e9f0ef;
+}
+
+.content {
+    max-width: 800px;
+    margin: 0 auto;
+    opacity: 0; /* Hidden by default */
+    transform: translateY(50px); /* Initial state for some animations */
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out; /* Base transition */
+}
+
+/* Specific content animations */
+.content.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hero Section Specifics */
+.hero-section {
+    /* Gradient chính: Hiện đại và năng động */
+    background: linear-gradient(135deg, #8a2be2 0%, #a77df5 50%, #e6e6fa 100%); /* Tím -> Tím nhạt -> Lavender */
+    color: white; /* Giữ màu chữ trắng để nổi bật trên gradient */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Thêm các hình dạng blob mờ ảo */
+.hero-section::before,
+.hero-section::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px); /* Làm mờ cực đại */
+    opacity: 0.6;
+    z-index: 0; /* Đặt dưới nội dung */
+}
+
+.hero-section::before {
+    background: radial-gradient(circle, #ffad6a 0%, transparent 70%); /* Cam đào */
+    width: 300px;
+    height: 300px;
+    top: -80px;
+    left: -80px;
+}
+
+.hero-section::after {
+    background: radial-gradient(circle, #29b6f6 0%, transparent 70%); /* Xanh da trời */
+    width: 400px;
+    height: 400px;
+    bottom: -100px;
+    right: -100px;
+}
+
+/* Đảm bảo nội dung vẫn ở trên cùng */
+.hero-section .content {
+    position: relative;
+    z-index: 1;
+}
+
+/* Điều chỉnh màu chữ strong trong hero */
+.hero-section h1 strong {
+    color: #FFCC80; /* Màu cam pastel nổi bật */
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.2); /* Tạo chút bóng đổ để nổi bật hơn */
+}
+
+/* Feature Sections */
+.feature-section h2 {
+    font-size: 2.2em;
+    margin-bottom: 15px;
+    color: #4a148c; /* Darker purple */
+}
+.feature-section p {
+    font-size: 1.1em;
+    line-height: 1.5;
+    margin-bottom: 25px;
+    color: #555;
+}
+/* Nền chung cho các section */
+
+
+/* Feature 1 (odd) - Ví dụ: Background trắng, blob tím nhẹ */
+/* FEATURE 1: Biến Bài Giảng Thành Đề Thi (Hiện đang là odd, sau hero) */
+#feature-1 {
+    /* Gradient từ tím nhạt sang xanh nhạt, hài hòa với hero */
+    background: linear-gradient(135deg, #a77df5 0%, #9face6 100%); /* Soft Purple to Lavender Blue */
+    color: #333; /* Màu chữ tối hơn để nổi bật */
+    position: relative;
+    overflow: hidden;
+}
+
+#feature-1::before {
+    content: '';
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%); /* Blob trắng mờ */
+    border-radius: 60% 40% 70% 30% / 30% 60% 40% 70%;
+    filter: blur(80px);
+    opacity: 0.8;
+    top: -50px;
+    right: -50px;
+    z-index: 0;
+}
+/* Bạn có thể thêm một ::after blob nữa nếu muốn */
+
+
+/* FEATURE 2: Đa Dạng Loại Câu Hỏi (Hiện đang là even) */
+.feature-section {
+    /* Gradient tương tự Hero nhưng nhạt hơn và có thể thay đổi góc */
+    background: linear-gradient(45deg, #a77df5 0%, #e6e6fa 100%); /* Tím nhạt -> Lavender */
+    color: #333; /* Màu chữ mặc định cho các section này */
+    position: relative;
+    overflow: hidden;
+    /* Thêm một lớp phủ nhẹ để làm sáng nền, giúp chữ tối dễ đọc hơn */
+}
+
+.feature-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3); /* Lớp phủ trắng trong suốt 30% */
+    z-index: 0; /* Đảm bảo nằm dưới nội dung */
+}
+
+/* Các Blob chung cho tất cả Feature Sections */
+/* Bạn có thể tạo 2-3 blob khác nhau và dùng chúng một cách ngẫu nhiên hoặc xen kẽ */
+
+/* Blob 1: Tím nhạt (tương tự màu chính) */
+.feature-section:nth-of-type(2)::after, /* Feature 1 */
+.feature-section:nth-of-type(4)::after { /* Feature 3 */
+    content: '';
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%); /* Tím rất nhẹ */
+    border-radius: 60% 40% 70% 30% / 30% 60% 40% 70%;
+    filter: blur(80px);
+    opacity: 0.8;
+    top: -50px;
+    right: -50px;
+    z-index: 0;
+}
+
+/* Blob 2: Cam đào (tương tự màu điểm nhấn của Hero) */
+.feature-section:nth-of-type(3)::after, /* Feature 2 */
+.feature-section:nth-of-type(5)::after { /* Feature 4 */
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 173, 106, 0.15) 0%, transparent 70%); /* Cam đào rất nhẹ */
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.7;
+    bottom: -70px;
+    left: -70px;
+    z-index: 0;
+}
+
+/* Blob 3: Xanh da trời (tương tự màu điểm nhấn của Hero) */
+/* Thêm một blob nữa ở một vị trí khác cho đa dạng, ví dụ: */
+.feature-section:nth-of-type(2)::before, /* Feature 1 */
+.feature-section:nth-of-type(3)::before, /* Feature 2 */
+.feature-section:nth-of-type(4)::before, /* Feature 3 */
+.feature-section:nth-of-type(5)::before { /* Feature 4 */
+    content: '';
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(41, 182, 246, 0.1) 0%, transparent 70%); /* Xanh da trời rất nhẹ */
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.6;
+    top: 50px;
+    left: 50px; /* Vị trí khác */
+    z-index: 0;
+}
+
+
+/* Đảm bảo nội dung luôn ở trên cùng */
+.feature-section .content {
+    position: relative;
+    z-index: 1;
+}
+
+/* --- Điều Chỉnh Màu Sắc Các Thành Phần Nội Dung (Rất quan trọng) --- */
+/* Đảm bảo chúng tương phản tốt trên nền gradient sáng hơn */
+.feature-section h2 {
+    color: #4A148C; /* Tím đậm cho tiêu đề chính, vẫn rất nổi bật */
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.1); /* Thêm bóng đổ nhẹ cho nổi bật */
+}
+.feature-section p {
+    color: #444; /* Xám đậm hơn để dễ đọc trên nền sáng */
+}
+.feature-section p {
+    color: #555; /* Xám đậm để dễ đọc trên nền gradient */
+}
+
+
+
+
+
+/* --- Animation Styles --- */
+
+/* Fade In */
+.fade-in {
+    opacity: 0;
+    transition: opacity 1s ease-out;
+}
+.fade-in.active {
+    opacity: 1;
+}
+
+/* Slide In Left */
+.slide-in-left {
+    opacity: 0;
+    transform: translateX(-100px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.slide-in-left.active {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Slide In Right */
+.slide-in-right {
+    opacity: 0;
+    transform: translateX(100px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.slide-in-right.active {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Scale Up (for speed section or general content) */
+.scale-up {
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.scale-up.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* --- Specific Icon/Image Animations --- */
+
+/* Feature 1: Icon Transformation */
+.icon-transformation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+}
+.icon-transformation img {
+    width: 150px;
+    height: auto;
+    transition: transform 0.8s ease-out;
+}
+.icon-lecture {
+    transform: translateX(0); /* Initial state */
+}
+.icon-exam {
+    transform: translateX(0); /* Initial state */
+}
+.arrow-right {
+    font-size: 3em;
+    margin: 0 20px;
+    color: #999; /* Xám nhẹ nhàng */
+}
+
+/* Animation triggered by JS on active */
+.feature-section#feature-1 .content.active .icon-lecture {
+    transform: translateX(-20px); /* Move slightly left */
+}
+.feature-section#feature-1 .content.active .icon-exam {
+    transform: translateX(20px); /* Move slightly right */
+}
+/* You could add a subtle pulse or glow to the arrow here */
+
+/* Feature 2: Question Types */
+.question-types {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+.q-type {
+   
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    background-color: #8A2BE2; /* Tím Violet */
+    /* Có thể thêm box-shadow nhẹ để tạo chiều sâu */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+/* Delay effect for each question type */
+.feature-section#feature-2 .content.active .q-type.delay-1 { transition-delay: 0.1s; }
+.feature-section#feature-2 .content.active .q-type.delay-2 { transition-delay: 0.2s; }
+.feature-section#feature-2 .content.active .q-type.delay-3 { transition-delay: 0.3s; }
+.feature-section#feature-2 .content.active .q-type.delay-4 { transition-delay: 0.4s; }
+
+
+/* Feature 3: Speed Indicator */
+.speed-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+}
+.speed-icon {
+    width: 100px;
+    height: 100px;
+    transition: transform 1s ease-out;
+}
+.speed-text {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #66BB6A; /* Xanh lá dịu hơn */
+    margin-left: 20px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.feature-section#feature-3 .content.active .speed-icon {
+    transform: rotate(360deg) scale(1.1); /* Spin and slightly enlarge */
+}
+.feature-section#feature-3 .content.active .speed-text {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* Feature 4: Integration Icons */
+.integration-icons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+}
+.integration-icons img {
+    width: 120px;
+    height: 120px;
+    transition: transform 0.8s ease-out;
+}
+.app-logo {
+    transform: translateX(0); /* Initial state */
+}
+.online-exam-logo {
+    transform: translateX(0); /* Initial state */
+}
+.plus-icon {
+    font-size: 4em;
+    color: #29B6F6; /* Xanh da trời tươi sáng */
+    margin: 0 30px;
+    transition: transform 0.5s ease-out;
+}
+.feature-section#feature-4 .content.active .app-logo {
+    transform: translateX(-15px); /* Move slightly left */
+}
+.feature-section#feature-4 .content.active .online-exam-logo {
+    transform: translateX(15px); /* Move slightly right */
+}
+.feature-section#feature-4 .content.active .plus-icon {
+    transform: rotate(180deg); /* Spin the plus sign */
+}
+
+
+.nav-link-custom {
+  display: inline-block;
+  padding: 8px 16px;
+  margin: 4px;
+  text-decoration: none;
+  color: #b8eaf7;
+  font-weight: 500;
+  border-radius: 20px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link-custom:hover {
+  background-color: #faf8f9;
+  color: white;
+  transform: translateY(-2px); /* 👈 nâng nhẹ lên 2px */
+}
+
+.nav-link-custom::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background-color: #f7faec;
+  transition: width 0.3s ease;
+}
+
+.nav-link-custom:hover::after {
+  width: 100%;
+}
+/* --- Final Section: Brand Identity --- */
+/* --- Final Section: Brand Identity --- */
+.final-section {
+    background: linear-gradient(45deg, #a77df5 0%, #ffad6a 100%); /* Giữ nguyên hoặc điều chỉnh theo ý bạn */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px; /* Thêm padding để chữ không chạm mép màn hình */
+    box-sizing: border-box; /* Đảm bảo padding không làm tràn */
+}
+
+.final-section .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Đảm bảo content chiếm hết chiều rộng để chữ có không gian */
+    max-width: none; /* Bỏ giới hạn max-width của .content mặc định */
+}
+
+.final-section .brand-name {
+    /* Đây là phần quan trọng nhất */
+    font-size: 18vw; /* Dùng viewport width để chữ co giãn theo chiều ngang */
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em; /* Thường sẽ giảm letter-spacing để chữ trông đầy đặn hơn khi rất to */
+    margin: 0;
+    line-height: 0.8; /* Giảm line-height để chữ "nén" hơn một chút theo chiều dọc */
+    color: white;
+    text-shadow: 6px 6px 15px rgba(0, 0, 0, 0.3); /* Bóng đổ đậm hơn để nổi bật */
+    white-space: nowrap; /* Đảm bảo chữ không xuống dòng */
+    overflow: hidden; /* Ẩn phần chữ tràn ra ngoài nếu kích thước quá lớn */
+    /* Có thể điều chỉnh font-family để tìm font "bầu bĩnh" hơn nếu muốn */
+    font-family: 'Fredoka One', cursive; /* Ví dụ một font có thể bầu bĩnh */
+    /* Hoặc thử 'Bungee', 'Anton', 'Impact' (nếu muốn phong cách mạnh mẽ hơn) */
+}
+
+.final-section .brand-est-info {
+    display: flex;
+    align-items: baseline;
+    /* Điều chỉnh khoảng cách với tên brand nếu cần */
+    margin-top: 50px; /* Tăng khoảng cách để tách biệt rõ ràng */
+    position: relative; /* Cho vị trí tuyệt đối */
+    width: 100%; /* Chiếm hết chiều rộng */
+    justify-content: space-between; /* Đẩy EST và 2025 ra hai biên */
+    padding: 0 5%; /* Thêm padding ngang để không dính mép */
+    box-sizing: border-box;
+    /* Dùng Flexbox cho .brand-est-info */
+}
+
+.final-section .est-text,
+.final-section .year-text {
+    font-size: 2.5em; /* Kích thước lớn hơn cho EST và Năm */
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: 'Montserrat', sans-serif; /* Hoặc font khác phù hợp */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.final-section .year-text {
+    font-size: 4em; /* Năm lớn hơn EST */
+    font-weight: 900;
+    letter-spacing: 0; /* Bỏ letter-spacing âm nếu có */
+}
+
+
+/* Responsive adjustments for final section */
+@media (max-width: 768px) {
+    .final-section .brand-name {
+        font-size: 12vw; /* Giảm kích thước trên di động để vừa màn hình */
+        line-height: 1; /* Điều chỉnh lại line-height nếu cần */
+    }
+    .final-section .brand-est-info {
+        margin-top: 30px;
+        padding: 0 20px; /* Giảm padding ngang */
+    }
+    .final-section .est-text {
+        font-size: 1.5em;
+    }
+    .final-section .year-text {
+        font-size: 2.5em;
+    }
+}
+
+
+/* Responsive adjustments for final section */
+@media (max-width: 768px) {
+    .final-section .brand-name {
+        font-size: 3.5em; /* Giảm kích thước trên di động */
+        letter-spacing: -1px;
+    }
+    .final-section .est-text {
+        font-size: 1.2em;
+    }
+    .final-section .year-text {
+        font-size: 2em;
+    }
+    .final-section .brand-est-info {
+        gap: 10px;
+    }
+}
+
+
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .section {
+        min-height: 80vh; /* Adjust for smaller screens */
+    }
+    .hero-section h1 {
+        font-size: 2em;
+    }
+    .hero-section p {
+        font-size: 1em;
+    }
+    .feature-section h2 {
+        font-size: 1.8em;
+    }
+    .feature-section p {
+        font-size: 1em;
+    }
+    .icon-transformation img, .speed-icon, .integration-icons img {
+        width: 60px;
+        height: 60px;
+    }
+    .arrow-right, .plus-icon {
+        font-size: 2em;
+    }
+    .speed-text {
+        font-size: 1.8em;
+    }
+    .q-type {
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+}
+/* --- CSS for Custom Header --- */
+.custom-header {
+   
+    background: linear-gradient(90deg, #a77df5 0%, #e6e6fa 100%);
+    padding: 15px 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 100;
+}
+
+
+/* Điều chỉnh lại container trong header nếu bạn muốn nội dung header sát mép hơn */
+.custom-header .container {
+    /* Mặc định Bootstrap container có max-width. Nếu bạn muốn header full-width,
+       có thể cần bỏ class container trong HTML của header hoặc ghi đè như sau: */
+   
+    max-width: 100% !important;
+    padding-left: 5% !important;
+    padding-right: 5% !important;
+}
+
+
+
+/* Màu sắc và kiểu chữ cho Logo */
+.custom-header .logo-text {
+    font-size: 1.8em; /* Kích thước chữ logo */
+    font-weight: 700; /* Độ đậm */
+    color: white; /* Màu chữ trắng để nổi bật trên nền gradient */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1); /* Bóng đổ nhẹ */
+    font-family: 'Montserrat', sans-serif; /* Đề xuất font mạnh mẽ */
+}
+
+/* Màu sắc và kiểu chữ cho các link điều hướng */
+.custom-header .nav-link-custom {
+    color: white; /* Màu chữ trắng cho link */
+    text-decoration: none; /* Bỏ gạch chân */
+    margin-left: 30px; /* Khoảng cách giữa các link */
+    font-weight: 500; /* Độ đậm vừa phải */
+    font-size: 1.1em; /* Kích thước chữ link */
+    transition: color 0.3s ease, transform 0.2s ease; /* Hiệu ứng chuyển động mượt mà */
+}
+
+.custom-header .nav-link-custom:hover {
+    color: #ffad6a; /* Màu cam đào điểm nhấn khi hover (từ bảng màu của bạn) */
+    transform: translateY(-2px); /* Hiệu ứng nhấc nhẹ khi hover */
+}
+
+/* Responsive adjustments for header (nếu cần) */
+@media (max-width: 768px) {
+    .custom-header .container {
+        flex-direction: column; /* Xếp logo và nav theo cột trên di động */
+        align-items: flex-start; /* Căn trái trên di động */
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+    .custom-header nav {
+        margin-top: 15px; /* Khoảng cách giữa logo và nav */
+        width: 100%;
+        text-align: left;
+    }
+    .custom-header .nav-link-custom {
+        margin-left: 0; /* Bỏ margin trái */
+        margin-right: 20px; /* Thêm khoảng cách phải để các link không dính vào nhau */
+        margin-bottom: 5px; /* Khoảng cách dưới nếu xếp theo cột */
+        display: inline-block; /* Hoặc block nếu muốn mỗi link một dòng */
+    }
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Vào Phòng Thi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f1f1;
+            padding: 20px;
+        }
+        .exam-container {
+            max-width: 500px;
+            margin: auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        video {
+            width: 100%;
+            margin-top: 15px;
+            border: 2px solid #444;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .room-info {
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="exam-container">
+        <h2>Vào Phòng Thi</h2>
+        <div class="room-info">
+            Mã phòng thi: <strong>{{ room_code }}</strong>
+        </div>
+        <form method="POST" action="{{ url_for('room_bp.enter_exam_room', room_code=room_code) }}">
+            <label for="student_name">Họ và tên:</label>
+            <input type="text" id="student_name" name="student_name" value="{{ student_name }}" required>
+            <label for="otp_code">🔐 Nhập mã OTP đã gửi về email:</label>
+            <input type="text" name="otp_code" required>
+
+            <label for="student_code">Mã sinh viên:</label>
+            <input type="text" id="student_code" name="student_code" value="{{ student_code }}" required>
+            <input type="hidden" name="room_code" value="{{ room_code }}">
+            <input type="hidden" id="camera_ok" name="camera_ok" value="0">
+
+            <video id="cameraPreview" autoplay muted playsinline></video>
+
+            <div class="error" id="cameraError" style="display:none;">❌ Không thể truy cập camera. Bạn cần bật camera để vào phòng thi.</div>
+
+
+            <button type="submit" id="startBtn">Bắt đầu làm bài</button>
+        </form>
+    </div>
+    <script>
+        const video = document.getElementById('cameraPreview');
+        const startBtn = document.getElementById('startBtn');
+        const cameraOkInput = document.getElementById('camera_ok');
+        const cameraError = document.getElementById('cameraError');
+    
+        // Thử truy cập camera
+        async function checkCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                startBtn.disabled = false;
+                cameraOkInput.value = "1"; // báo hiệu camera đã bật
+            } catch (error) {
+                cameraError.style.display = 'block';
+                startBtn.disabled = true;
+                cameraOkInput.value = "0";
+            }
+        }
+    
+        window.addEventListener('load', checkCamera);
+    </script>
+</body>
+</html>

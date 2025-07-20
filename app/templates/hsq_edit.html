@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chỉnh Sửa Bộ Đề Thi THPT 2025</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='hsq_edit.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Chỉnh Sửa Bộ Đề Thi THPT 2025</h1>
+
+      <!-- Phần Trắc nghiệm MCQ -->
+      <div class="question-section">
+        <h2 class="section-title">Trắc nghiệm MCQ</h2>
+        <div id="mcq-questions-container">
+          {% for q in mcq_questions %} {% set idx = loop.index0 %}
+          <div
+            class="question-block mcq-question"
+            data-question-id="{{ q.id }}"
+          >
+            <div class="question-header">
+              <label for="mcq-q{{ idx+1 }}-text">Câu {{ idx+1 }}:</label>
+              <input
+                type="text"
+                id="mcq-q{{ idx+1 }}-text"
+                value="{{ q.question_text }}"
+                class="question-input"
+              />
+            </div>
+            <div class="options-container">
+              <div class="option-row">
+                <label for="mcq-q{{ idx+1 }}-option-a">A</label>
+                <input
+                  type="text"
+                  id="mcq-q{{ idx+1 }}-option-a"
+                  value="{{ q.answer_a }}"
+                />
+              </div>
+              <div class="option-row">
+                <label for="mcq-q{{ idx+1 }}-option-b">B</label>
+                <input
+                  type="text"
+                  id="mcq-q{{ idx+1 }}-option-b"
+                  value="{{ q.answer_b }}"
+                />
+              </div>
+              <div class="option-row">
+                <label for="mcq-q{{ idx+1 }}-option-c">C</label>
+                <input
+                  type="text"
+                  id="mcq-q{{ idx+1 }}-option-c"
+                  value="{{ q.answer_c }}"
+                />
+              </div>
+              <div class="option-row">
+                <label for="mcq-q{{ idx+1 }}-option-d">D</label>
+                <input
+                  type="text"
+                  id="mcq-q{{ idx+1 }}-option-d"
+                  value="{{ q.answer_d }}"
+                />
+              </div>
+            </div>
+            <div class="correct-answer-selection">
+              <label>Correct answer:</label>
+              <input
+                type="text"
+                class="correct-answer-display"
+                value="{{ q.correct_answer }}"
+              />
+              <button class="btn update-btn">Cập nhật</button>
+              <button class="btn delete-btn">Xóa</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Phần Câu hỏi đúng sai -->
+      <div class="question-section">
+        <h2 class="section-title">Câu hỏi đúng sai</h2>
+        <div id="true-false-questions-container">
+          {% for q in tf_questions %} {% set idx = loop.index0 %}
+          <div
+            class="question-block true-false-question"
+            data-question-id="{{ q.id }}"
+          >
+            <div class="question-header">
+              <label for="tf-q{{ idx+1 }}-text">Câu {{ idx+1 }}:</label>
+              <input
+                type="text"
+                id="tf-q{{ idx+1 }}-text"
+                value="{{ q.question_text }}"
+                class="question-input"
+              />
+            </div>
+            <div class="image-display-area">
+              <img
+                src="{{ q.image_url or 'https://via.placeholder.com/200x120?text=Ảnh+Câu+Hỏi' }}"
+                alt="Ảnh minh họa"
+                class="question-image"
+              />
+              <input type="file" accept="image/*" class="image-upload-input" />
+              <small>Thay đổi ảnh (nếu cần)</small>
+            </div>
+            <div class="statements-container">
+              {% set labels = ['A', 'B', 'C', 'D'] %} {% for item in
+              q["items"] %} {% set i = loop.index0 %} {% set label = labels[i]
+              %}
+              <div class="statement-row">
+                <label for="tf-q{{ idx+1 }}-statement-{{ label }}"
+                  >{{ label }}</label
+                >
+                <input
+                  type="text"
+                  id="tf-q{{ idx+1 }}-statement-{{ label }}"
+                  value="{{ item.statement_text }}"
+                />
+                <input
+                  type="text"
+                  class="true-false-status"
+                  value="{{ 'Đúng' if item.is_true else 'Sai' }}"
+                />
+              </div>
+              {% endfor %}
+            </div>
+            <div class="action-buttons-bottom">
+              <button class="btn update-btn">Cập nhật</button>
+              <button class="btn delete-btn">Xóa</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Phần Câu hỏi trả lời ngắn -->
+      <div class="question-section">
+        <h2 class="section-title">Câu hỏi trả lời ngắn</h2>
+        <div id="short-answer-questions-container">
+          {% for q in short_questions %} {% set idx = loop.index0 %}
+          <div
+            class="question-block short-answer-question"
+            data-question-id="{{ q.id }}"
+          >
+            <div class="question-header">
+              <label for="sa-q{{ idx+1 }}-text">Câu {{ idx+1 }}:</label>
+              <input
+                type="text"
+                id="sa-q{{ idx+1 }}-text"
+                value="{{ q.question_text }}"
+                class="question-input"
+              />
+            </div>
+            <div class="answer-area">
+              <label for="sa-q{{ idx+1 }}-answer">answer</label>
+              <input
+                type="text"
+                id="sa-q{{ idx+1 }}-answer"
+                value="{{ q.correct_answer }}"
+              />
+            </div>
+            <div class="action-buttons-bottom">
+              <button class="btn update-btn">Cập nhật</button>
+              <button class="btn delete-btn">Xóa</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <form action="{{ url_for('highschool.shuffle_exam', exam_set_id=exam_set_id) }}" method="post" style="display:inline;">
+    <button type="submit">Trộn đề</button>
+</form>
+    </div>
+    
+  </body>
+<script>
+
+function containsEmoji(str) {
+  return /[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/u.test(str);
+}
+
+function showError(input, message) {
+  // Xoá lỗi cũ nếu có
+  const oldError = input.parentElement.querySelector(".error-msg");
+  if (oldError) oldError.remove();
+
+  const err = document.createElement("div");
+  err.className = "error-msg";
+  err.style.color = "red";
+  err.style.fontSize = "0.85em";
+  err.style.marginTop = "4px";
+  err.innerText = message;
+
+  input.parentElement.appendChild(err);
+}
+
+function validateInputs(event) {
+  const allInputs = document.querySelectorAll(
+    'input[type="text"]:not(.true-false-status)'
+  );
+
+  let valid = true;
+
+  // Xoá tất cả lỗi cũ
+  document.querySelectorAll(".error-msg").forEach(e => e.remove());
+
+  allInputs.forEach(input => {
+    const value = input.value.trim();
+
+    if (value.length < 2) {
+      showError(input, "Phải nhập tối thiểu 2 ký tự.");
+      valid = false;
+    } else if (containsEmoji(value)) {
+      showError(input, "Không được nhập emoji hoặc icon.");
+      valid = false;
+    }
+  });
+
+  if (!valid) {
+    event.preventDefault();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.querySelector("form");
+  if (form) {
+    form.addEventListener("submit", validateInputs);
+  }
+});
+
+
+  </script>
+</html>

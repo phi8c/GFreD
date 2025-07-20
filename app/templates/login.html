@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Đăng Nhập{% endblock %}
+
+{% block content %}
+<div class="login-page">
+  <div class="login-container">
+    <div class="card shadow">
+      <div class="card-body">
+        <h2 class="text-center mb-4">Đăng nhập</h2>
+        <form method="post">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input id="email" type="email" name="email" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Mật khẩu:</label>
+            <input id="password" type="password" name="password" class="form-control" required>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+          </div>
+        </form>
+
+        <p class="mt-3 text-center">
+          Chưa có tài khoản? <a href="{{ url_for('auth.register') }}">Đăng ký</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+
+
+
+
+<!-- thêm từ đây-->
+
+{% block scripts %}
+<!-- Gắn JS ở cuối -->
+<script src="{{ url_for('static', filename='formValidator.js') }}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    initFormValidation({
+      fields: {
+        username: {
+          selector: 'input[name="username"]',
+          rules: {
+            required: true,
+            minLength: 3,
+            maxLength: 50,
+            noEmoji: true,
+            noSpecialChars: true
+          },
+          errorMessage: "Tên chỉ chứa chữ cái, số và khoảng trắng, không dùng emoji hoặc ký tự đặc biệt."
+        },
+        password: {
+          selector: 'input[name="password"]',
+          rules: {
+            required: true,
+            strongPassword: true
+          },
+          errorMessage: "Mật khẩu phải từ 8 ký tự trở lên, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
+        }
+      }
+    });
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,211 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f6fa;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background-color: #2c3e50;
+  color: #fff;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.sidebar ul {
+  list-style: none;
+}
+
+.sidebar li {
+  
+  position: relative;
+  padding-right: 30px;
+  padding: 10px;
+  border-bottom: 1px solid #34495e;
+}
+
+.sidebar li a {
+  color: #ecf0f1;
+  text-decoration: none;
+  display: block;
+}
+
+.sidebar li.active,
+.sidebar li:hover {
+  background-color: #34495e;
+}
+
+.question-area {
+  flex: 1;
+  padding: 20px;
+  background: #fff;
+}
+
+.question-card {
+  background: #ecf0f1;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+.add-btn {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: green;
+}
+
+.sidebar li:hover .add-btn {
+  display: inline;
+}
+
+/*
+ * Về màu sắc:
+ * - Dùng màu xanh biển làm màu chủ đạo (primary color) để tạo cảm giác tin cậy và chuyên nghiệp.
+ * - Dùng màu xám nhạt làm nền để popup nổi bật hơn.
+ * - Dùng màu xám đậm cho chữ để dễ đọc.
+ */
+
+/* Thiết lập chung cho popup */
+.popup {
+  display: none; /* Mặc định ẩn */
+  position: fixed; /* Giữ cố định trên màn hình */
+  z-index: 1; /* Nằm trên các phần tử khác */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4); /* Lớp phủ mờ */
+  display: flex; /* Dùng flexbox để căn giữa dễ dàng */
+  justify-content: center;
+  align-items: center;
+}
+
+/* Nội dung popup */
+.popup-content {
+  background-color: #fff; /* Nền trắng */
+  margin: auto;
+  padding: 30px;
+  border-radius: 10px; /* Bo góc mềm mại */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Tạo bóng đổ */
+  width: 90%;
+  max-width: 450px; /* Giới hạn chiều rộng để không bị quá to */
+  font-family: Arial, sans-serif; /* Chọn font chữ dễ đọc */
+  animation: fadeIn 0.3s ease-in-out; /* Thêm hiệu ứng xuất hiện */
+}
+
+/* Hiệu ứng xuất hiện */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Nút đóng */
+.close {
+  color: #aaa;
+  float: right; /* Đặt ở góc trên bên phải */
+  font-size: 28px;
+  font-weight: bold;
+  transition: color 0.3s ease; /* Thêm hiệu ứng chuyển màu */
+}
+
+.close:hover,
+.close:focus {
+  color: #007bff; /* Đổi màu khi hover */
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Tiêu đề */
+.popup-content h3 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 25px;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+/* Form và các phần tử trong form */
+.popup-content form label {
+  display: block; /* Đặt mỗi label trên một dòng */
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+}
+
+.popup-content form input,
+.popup-content form select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Hiệu ứng khi focus vào input/select */
+.popup-content form input:focus,
+.popup-content form select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Nút "Tạo bộ đề" */
+.popup-content button {
+  background-color: #007bff; /* Màu nền xanh chủ đạo */
+  color: #fff; /* Chữ trắng */
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hiệu ứng hover và active cho nút */
+.popup-content button:hover {
+  background-color: #0056b3; /* Đậm màu hơn khi hover */
+}
+
+.popup-content button:active {
+  transform: scale(0.98); /* Hiệu ứng nhấn nhẹ */
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+}

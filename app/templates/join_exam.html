@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='stylejoin.css') }}">
+    <title>Tham gia Phòng Thi</title>
+</head>
+<body>
+    <div class="form-container">
+    <h2>Thông tin Sinh viên</h2>
+    <form method="post" action="{{ url_for('room_bp.join_exam') }}">
+
+        <div class="form-group">
+        <label>Họ và tên:</label><br>
+        <input type="text" name="full_name" required>
+        </div>
+
+        <div class="form-group">
+
+
+        <label>Mã số sinh viên:</label><br>
+        <input type="text" name="student_id" required>
+        </div>
+
+        <div class="form-group">
+
+        <label>Lớp:</label><br>
+        <input type="text" name="class_name" required>
+        </div>
+
+        <div class="form-group">
+
+        <label>Mã phòng thi:</label><br>
+        <input type="text" name="room_code" required><br>
+        </div>
+
+
+        <div class="form-group">
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br>
+        </div>
+
+        <button type="submit">Tham gia thi</button>
+    </form>
+    </div>
+</body>
+
+<script>
+function containsEmoji(str) {
+  return /[\u{1F600}-\u{1F64F}  // Emoticons
+           \u{1F300}-\u{1F5FF}  // Symbols & pictographs
+           \u{1F680}-\u{1F6FF}  // Transport & map symbols
+           \u{1F1E6}-\u{1F1FF}  // Flags
+           \u{2600}-\u{26FF}    // Misc symbols
+           \u{2700}-\u{27BF}    // Dingbats
+           \u{1F900}-\u{1F9FF}  // Supplemental Symbols
+           \u{1FA70}-\u{1FAFF}  // Symbols and Pictographs Extended-A
+           \u{1F018}-\u{1F270}
+           \u{238C}-\u{2454}]/u.test(str);
+}
+
+
+function containsSpecialChars(str) {
+    return /[^a-zA-Z0-9À-ỹ\s]/.test(str); // Cho phép chữ tiếng Việt có dấu và khoảng trắng
+}
+
+function validateJoinForm(event) {
+    const fullName = document.querySelector('input[name="full_name"]');
+    const studentId = document.querySelector('input[name="student_id"]');
+    const className = document.querySelector('input[name="class_name"]');
+    const roomCode = document.querySelector('input[name="room_code"]');
+    const email = document.querySelector('input[name="email"]');
+
+    let valid = true;
+    const fields = [fullName, studentId, className, roomCode];
+
+    // Xóa lỗi cũ
+    document.querySelectorAll('.validation-error').forEach(el => el.remove());
+
+    fields.forEach(field => {
+        const value = field.value.trim();
+        let errorMsg = "";
+
+        if (value.length < 2 || value.length > 100) {
+            errorMsg = "Tối thiểu 2, tối đa 100 ký tự.";
+        } else if (containsEmoji(value)) {
+            errorMsg = "Không được chứa emoji.";
+        } else if (containsSpecialChars(value)) {
+            errorMsg = "Không chứa ký tự đặc biệt.";
+        }
+
+        if (errorMsg) {
+            const errorEl = document.createElement("div");
+            errorEl.className = "validation-error";
+            errorEl.innerText = errorMsg;
+            field.parentNode.appendChild(errorEl);
+            valid = false;
+        }
+    });
+
+    // Kiểm tra email định dạng chuẩn (HTML5 sẽ check, JS chỉ đảm bảo không emoji)
+    if (containsEmoji(email.value)) {
+        const errorEl = document.createElement("div");
+        errorEl.className = "validation-error";
+        errorEl.innerText = "Email không được chứa emoji.";
+        email.parentNode.appendChild(errorEl);
+        valid = false;
+    }
+
+    if (!valid) event.preventDefault(); // Ngăn submit nếu không hợp lệ
+}
+
+// Gắn sự kiện khi DOM đã load
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener("submit", validateJoinForm);
+    }
+});
+
+
+
+
+
+
+
+
+</script>
+</html>

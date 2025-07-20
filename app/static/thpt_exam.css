@@ -1,0 +1,120 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f5f6fa;
+    margin: 0;
+    padding: 0;
+}
+
+.exam-container {
+    max-width: 960px;
+    margin: 30px auto;
+    padding: 20px 30px;
+    background-color: #ffffff;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+}
+
+h2, h3 {
+    color: #2f3640;
+    border-bottom: 2px solid #dcdde1;
+    padding-bottom: 5px;
+}
+
+.info-box {
+    background-color: #f0f3f5;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-left: 5px solid #00a8ff;
+    border-radius: 4px;
+}
+
+.question {
+    margin-bottom: 20px;
+    padding: 12px 18px;
+    background-color: #f9f9f9;
+    border-left: 4px solid #7f8fa6;
+    border-radius: 5px;
+}
+
+.options {
+    margin-top: 8px;
+}
+
+.options label {
+    display: block;
+    margin-bottom: 6px;
+    padding: 6px 10px;
+    background-color: #ecf0f1;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.options input[type="radio"] {
+    margin-right: 8px;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-top: 6px;
+}
+
+.submit-btn {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.submit-btn button {
+    background-color: #44bd32;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.submit-btn button:hover {
+    background-color: #4cd137;
+}
+
+#countdown {
+    font-weight: bold;
+    color: #e84118;
+}
+
+/* --- Responsive cho điện thoại --- */
+@media (max-width: 576px) {
+    .exam-container {
+        padding: 20px;
+    }
+
+    .info-box {
+        font-size: 0.95em;
+    }
+
+    .question p,
+    .options label {
+        font-size: 0.95em;
+    }
+
+    textarea {
+        font-size: 1em;
+    }
+
+    .submit-btn button {
+        width: 100%;
+        font-size: 1.1em;
+    }
+
+    #localCamera {
+        width: 100%;
+        height: auto;
+    }
+}
+

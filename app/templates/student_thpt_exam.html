@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bài thi THPT 2025</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='thpt_exam.css') }}">
+</head>
+<body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
+<div class="exam-container">
+    <h2>📝 Bài Thi THPT 2025</h2>
+    <video id="localCamera" autoplay muted playsinline width="150" height="100"></video>
+
+    <div class="info-box">
+        <p><strong>👤 Họ tên:</strong> {{ student_name }}</p>
+        <p><strong>🎓 Mã SV:</strong> {{ student_code }}</p>
+        <p><strong>📄 Mã đề:</strong> {{ exam_code }}</p>
+        <p><strong>⏰ Còn lại:</strong> <span id="countdown"></span></p>
+    </div>
+
+    <form method="POST" action="{{ url_for('exam_hs.submit_thpt2025_exam', room_code=room_code) }}" id="examForm">
+        <input type="hidden" name="student_exam_id" value="{{ student_exam_id }}">
+        <input type="hidden" name="room_code" value="{{ room_code }}">
+        <input type="hidden" name="exam_code" value="{{ exam_code }}">
+
+        <!-- MCQ Questions -->
+        <h3>Phần 1: Trắc nghiệm</h3>
+        {% for q in mcq_questions %}
+        <div class="question">
+            <p><strong>Câu {{ loop.index }}:</strong> {{ q.question_text }}</p>
+            <div class="options">
+                <label><input type="radio" name="mcq_{{ q.question_id }}" value="A" required> A. {{ q.answer_a }}</label>
+                <label><input type="radio" name="mcq_{{ q.question_id }}" value="B"> B. {{ q.answer_b }}</label>
+                <label><input type="radio" name="mcq_{{ q.question_id }}" value="C"> C. {{ q.answer_c }}</label>
+                <label><input type="radio" name="mcq_{{ q.question_id }}" value="D"> D. {{ q.answer_d }}</label>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- TF Questions -->
+        <h3>Phần 2: Đúng / Sai</h3>
+        {% for tf in tf_questions %}
+        <div class="question">
+            <p><strong>Câu {{ loop.index }}:</strong> {{ tf.question_text }}</p>
+            {% if tf.image_url %}
+            <div><img src="{{ tf.image_url }}" alt="Hình minh họa" style="max-width: 300px; margin-bottom: 10px;"></div>
+        {% endif %}
+            <div class="options">
+                {% for stmt in tf.statements %}
+    <p><strong>{{ stmt.label }}.</strong> <em>{{ stmt.content }}</em></p>
+    <!-- SỬA TỪ CHỖ NÀY-->
+     <p>{{ stmt.id }}</p>
+
+    <label>
+        
+
+        <input type="radio" name="tf_{{ stmt.id  }}" value="true" > Đúng
+    </label>
+    <label>
+        <input type="radio" name="tf_{{ stmt.id  }}" value="false"> Sai
+    </label>
+    <!-- ĐẾN CHỖ NÀY-->
+    {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- SA Questions -->
+        <h3>Phần 3: Trả lời ngắn</h3>
+        {% for sa in sa_questions %}
+        <div class="question">
+            <p><strong>Câu {{ loop.index }}:</strong> {{ sa.question_text }}</p>
+            <textarea name="sa_{{ sa.map_id }}" rows="3" required placeholder="Nhập câu trả lời..."></textarea>
+        </div>
+        {% endfor %}
+
+        <div class="submit-btn">
+            <button type="submit">🚀 Nộp bài</button>
+        </div>
+    </form>
+    
+
+</div>
+
+
+  <!-- Scripts -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<!-- Countdown logic -->
+
+<script>
+    const endTime = new Date("{{ end_time }}");
+    const countdown = document.getElementById("countdown");
+    const examForm = document.getElementById("examForm");
+    let localCameraTrack = null;
+    let localScreenTrack = null;
+
+
+    function updateCountdown() {
+      const now = new Date();
+      const remaining = endTime - now;
+
+      if (remaining <= 0) {
+        countdown.textContent = "⏱ Hết giờ!";
+        clearInterval(interval);
+        alert("Đã hết giờ, hệ thống sẽ tự động nộp bài.");
+        examForm.submit();
+      } else {
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        countdown.textContent = `${mins} phút ${secs < 10 ? '0' : ''}${secs} giây`;
+      }
+    }
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    // 👇 WebSocket + WebRTC
+    //const socket = io('/webrtc', { path: '/socket.io' });
+  const socket = io('/webrtc', {
+  path: '/socket.io',
+  transports: ['websocket', 'polling']
+});
+
+
+    const roomCode = "{{ room_code }}";
+    const studentCode = "{{ student_code }}";
+    const studentName = "{{ student_name }}";
+    const className = "{{ class_name }}";
+    const peers = {};
+
+    socket.on('connect', () => {
+      socket.emit('join_room', { room: roomCode });
+      socket.emit('join_room', { room: studentCode });
+      socket.emit('new-student-joined', {
+        room: roomCode,
+        student_code: studentCode,
+        student_name: studentName,   // Thêm vào
+        class_name: className 
+      });
+    });
+
+    async function sendToInstructor(type, stream) {
+      
+      const pc = new RTCPeerConnection();
+      peers[type] = pc;
+      console.log(`🎥 [${type}] Số track trong stream:`, stream.getTracks().length);
+
+      stream.getTracks().forEach(track => {
+        console.log("📡 Gửi track:", track.kind);
+        pc.addTrack(track, stream);
+      });
+
+      pc.onicecandidate = event => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', {
+            room: roomCode,
+            candidate: event.candidate,
+            type: type,
+            student_code: studentCode
+          });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socket.emit('offer', {
+        room: roomCode,
+        offer,
+        type: type,
+        student_code: studentCode
+      });
+
+     // socket.on('answer', data => {
+       // if (data.student_code === studentCode && data.type === type) {
+        //  pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        //}
+     // });
+
+    socket.on('kicked', function(data) {
+    alert(data.message || 'Bạn đã bị đuổi khỏi phòng thi.'); 
+    window.location.href = '/join-room';       
+});
+
+
+   socket.on('banned', function(data) {
+    alert(data.message || 'Bạn đã bị Cấm vào phòng thi này vĩnh viễn.'); 
+    window.location.href = '/join-room';       
+});
+
+  // đoạn này mới thêm vào
+
+  // 🔁 Nhận yêu cầu từ giảng viên để gửi lại stream
+
+
+
+}
+
+ // chứa các peerConnection theo type ("camera", "screen")
+
+socket.on("answer", (data) => {
+  const { student_code, type, answer } = data;
+
+  if (student_code !== studentCode) return;
+
+  const pc = peers[type];
+  if (!pc) {
+    console.warn("⚠️ Không tìm thấy peerConnection cho", type);
+    return;
+  }
+
+  if (pc.signalingState !== "have-local-offer") {
+    console.warn(`⚠️ Trạng thái sai khi setRemoteDescription: ${pc.signalingState}`);
+    return;
+  }
+
+  pc.setRemoteDescription(new RTCSessionDescription(answer))
+    .then(() => {
+      console.log(`✅ setRemoteDescription thành công cho ${type}`);
+    })
+    .catch(err => {
+      console.error(`❌ Lỗi khi setRemoteDescription cho ${type}:`, err);
+    });
+});
+
+socket.on("resend-stream", () => {
+  console.log("📥 Nhận yêu cầu resend-stream từ giảng viên");
+
+  if (localCameraTrack) {
+    const camStream = new MediaStream([localCameraTrack]);
+    sendToInstructor("camera", camStream);  // 🔁 Tạo connection mới cho camera
+    console.log("📤 Gửi lại stream camera");
+  } else {
+    console.warn("⚠️ Không có localCameraTrack");
+  }
+
+  if (localScreenTrack) {
+    const screenStream = new MediaStream([localScreenTrack]);
+    sendToInstructor("screen", screenStream);  // 🔁 Tạo connection mới cho screen
+    console.log("📤 Gửi lại stream màn hình");
+  } else {
+    console.warn("⚠️ Không có localScreenTrack");
+  }
+});
+
+
+function sendLog(type, detail = "") {
+    const timestamp = new Date().toISOString();
+
+    console.log(`[LOG][${timestamp}] ${type} - ${detail}`);
+
+    socket.emit("log_event", {
+        student_name: "{{ student_name }}",
+        room_code: "{{ room_code }}",
+        type: type,
+        detail: detail,
+        timestamp: timestamp
+    });
+}
+
+
+
+
+    // đoạn này mới thêm vào để chuyển hướng sinh viên
+
+    
+
+
+
+    // kết thúc đoạn chuyển hướng sinh viên
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        document.getElementById('localCamera').srcObject = stream;
+
+        localCameraTrack = stream.getVideoTracks()[0];
+        
+        await sendToInstructor('camera', stream);
+        console.log("✅ Đã gửi camera đến giảng viên");
+      } catch (err) {
+        console.error("Không thể mở camera:", err);
+      }
+    }
+
+    async function startScreenShare() {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+        localScreenTrack = screenStream.getVideoTracks()[0];
+        await sendToInstructor('screen', screenStream);
+        console.log("✅ Đã chia sẻ màn hình đến giảng viên");
+      } catch (err) {
+        console.error("Không thể chia sẻ màn hình:", err);
+      }
+    }
+
+    window.onload = async () => {
+      await startCamera();
+      await startScreenShare();
+    };
+  </script>
+
+  <script>
+
+
+// 👁️ Phát hiện DevTools
+setInterval(() => {
+    const start = performance.now();
+    debugger;
+    const delay = performance.now() - start;
+    if (delay > 100) {
+        sendLog("devtools_opened", "Phát hiện DevTools đang mở");
+    }
+}, 1000);
+
+// 🔁 Rời / quay lại tab
+window.addEventListener("blur", () => sendLog("window_blur", "Rời khỏi tab"));
+window.addEventListener("focus", () => sendLog("window_focus", "Quay lại tab"));
+
+// 📋 Hành vi sao chép / dán
+document.addEventListener("copy", () => sendLog("copy", "Sao chép nội dung"));
+document.addEventListener("cut", () => sendLog("cut", "Cắt nội dung"));
+document.addEventListener("paste", (e) => {
+    const pasted = e.clipboardData.getData("text").slice(0, 100);
+    sendLog("paste", "Dán: " + pasted);
+});
+document.addEventListener("contextmenu", () => sendLog("right_click", "Chuột phải"));
+
+// 🔄 Reload hoặc đóng tab
+window.addEventListener("beforeunload", () => {
+    sendLog("page_unload", "Reload hoặc đóng tab");
+});
+
+// ⏱️ Trả lời quá nhanh
+const answerTimers = {};
+document.querySelectorAll('input[type=radio]').forEach(input => {
+    const name = input.name;
+    if (!answerTimers[name]) {
+        answerTimers[name] = Date.now();
+    }
+    input.addEventListener("change", () => {
+        const timeTaken = Date.now() - answerTimers[name];
+        if (timeTaken < 3000) {
+            sendLog("answer_too_fast", `Trả lời ${name} sau ${timeTaken / 1000}s`);
+        }
+    });
+});
+</script>
+
+</body>
+</html>

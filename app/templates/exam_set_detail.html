@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chi tiết Bộ Đề</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='exam_set.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="exam-header">
+        <div class="exam-title">
+          <h1>Chi tiết Bộ Đề #{{ exam_set_id }}</h1>
+        </div>
+        <div class="exam-actions">
+          <a href="{{ url_for('question.index') }}" class="back-btn"
+            >← Quay lại trang chính</a
+          >
+          <a
+            href="{{ url_for('room_bp.export_exam_view') }}?exam_set_id={{ exam_set_id }}"
+            class="export-button"
+          >
+            📁 Xuất folder bộ đề
+          </a>
+          <a
+            href="{{ url_for('room_bp.export_exam_questions_xlsx_view', exam_set_id=exam_set_id, user_id=current_user_id) }}"
+            class="export-xlsx-button"
+          >
+            📊 Xuất file Excel câu hỏi
+          </a>
+         <a 
+          href="{{ url_for('room_bp.exam_ui', exam_set_id=exam_set_id) }}" 
+          class="export-button"
+            >
+          ➕ Tạo phòng thi từ bộ đề này
+        </a>
+        <a href="#" id="add-to-bank-link" style="display: none;" class="export-button" data-exam-set-id="{{ exam_set_id }}">
+          ➕ Thêm vào ngân hàng
+        </a>
+
+
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-buttons">
+        {% for code in mcq_versions.keys() %}
+
+        <div
+          style="display: inline-block; margin-right: 10px; position: relative"
+        >
+          <!-- Nút chọn mã đề -->
+          <button
+            onclick="showVersion('{{ code }}')"
+            id="btn-{{ code }}"
+            class="{% if loop.first %}active-tab{% endif %}"
+          >
+            Đề {{ code }}
+          </button>
+
+          <div class="export-dropdown" style="display: inline-block">
+            <button>📄</button>
+            <div class="export-dropdown-content">
+              {% if mcq_versions[code]['exam_code_id'] %}
+              <a
+                href="{{ url_for('room_bp.export_answer_code', exam_code_id=mcq_versions[code]['exam_code_id'], format='pdf') }}"
+                >Xuất PDF</a
+              >
+              <a
+                href="{{ url_for('room_bp.export_answer_code', exam_code_id=mcq_versions[code]['exam_code_id'], format='docx') }}"
+                >Xuất DOCX</a
+              >
+              <a href="{{ url_for('room_bp.export_answer_code', exam_code_id=mcq_versions[code]['exam_code_id'], format='docx') }}">
+              Xuất đáp án
+              </a>
+              {% else %}
+              <a href="/export-original-exam/{{ exam_set_id }}?format=docx" class="btn btn-primary">
+              Xuất đề gốc (.docx)
+              </a>
+
+              <a href="/export-original-exam/{{ exam_set_id }}?format=pdf" class="btn btn-secondary" style="margin-left: 8px;">
+              Xuất đề gốc (.pdf)
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% endfor %}
+      </div>
+
+      <!-- Nội dung từng mã đề -->
+      {% for code in mcq_versions.keys() %}
+
+      <!-- từ đây-->
+
+      <!-- tới đây-->
+      <div
+        id="version-{{ code }}"
+        class="version-block {% if not loop.first %}hidden{% endif %}"
+      >
+        <!-- MCQ -->
+        {% if mcq_versions[code].questions %}
+        <h2 class="section-title">Trắc nghiệm MCQ</h2>
+        {% for q in mcq_versions[code].questions %}
+        <div class="question-block">
+          <label
+            >Câu {{ loop.index }}:
+            <textarea readonly class="question-textarea" rows="5">
+{{ q.question_text }}</textarea
+            >
+          </label>
+          <div class="options">
+            <label
+              >A
+              <textarea class="auto-resize" readonly>{{ q.answer_a }}</textarea>
+            </label>
+            <label
+              >B
+              <textarea class="auto-resize" readonly>{{ q.answer_b }}</textarea>
+            </label>
+            <label
+              >C
+              <textarea class="auto-resize" readonly>{{ q.answer_c }}</textarea>
+            </label>
+            <label
+              >D
+              <textarea class="auto-resize" readonly>{{ q.answer_d }}</textarea>
+            </label>
+          </div>
+          <p>
+            Đáp án đúng:
+            <textarea class="auto-resize" readonly>
+{{ q.correct_answer }}</textarea
+            >
+          </p>
+        </div>
+        {% endfor %} {% endif %}
+
+        <!-- TF -->
+        {% if tf_versions.get(code) %}
+        <h2 class="section-title">Câu hỏi Đúng / Sai</h2>
+        {% for tf in tf_versions[code] %}
+        <div class="question-block">
+          <label
+            >Câu {{ loop.index }}:
+            <textarea class="question-textarea" readonly>{{ tf.question_text }}</textarea></label>
+            {% if tf.image_url %}
+          <div class="question-image">
+         <img src="{{ tf.image_url }}" alt="Hình minh họa" style="max-width: 400px; margin: 10px 0;" />
+          </div>
+          {% endif %}
+            
+          {% for st in tf.statements %}
+          <div class="tf-statement">
+            <label
+              >{{ st.label }}
+              <textarea class="auto-stm statement-content" readonly>{{ st.content }}</textarea></label>
+            <span class="statement-choice">
+              <input
+                type="radio"
+                {%
+                if
+                st.is_true
+                %}checked{%
+                endif
+                %}
+                disabled
+              />
+              Đúng
+              <input
+                type="radio"
+                {%
+                if
+                not
+                st.is_true
+                %}checked{%
+                endif
+                %}
+                disabled
+              />
+              Sai
+            </span>
+          </div>
+          {% endfor %} 
+        </div>
+        {% endfor %} {% endif %}
+
+        <!-- SA -->
+        {% if sa_versions.get(code) %}
+        <h2 class="section-title">Câu hỏi Tự luận</h2>
+        {% for s in sa_versions[code] %}
+        <div class="question-block">
+          <label
+            >Câu {{ loop.index }}:
+            <textarea class="auto-resize question-textarea" readonly>{{ s.question_text }}</textarea>
+          </label>
+          <p>
+            
+            <textarea class="auto-resize question-textarea" readonly>{{ s.correct_answer }}</textarea>
+          </p>
+        </div>
+        {% endfor %} {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <script>
+      function showVersion(code) {
+    // Ẩn tất cả tab
+    document.querySelectorAll(".version-block").forEach((div) =>
+      div.classList.add("hidden")
+    );
+
+    // Hiện tab tương ứng
+    const activeDiv = document.getElementById("version-" + code);
+    activeDiv.classList.remove("hidden");
+
+    // Cập nhật trạng thái nút tab
+    document.querySelectorAll(".tab-buttons button").forEach((btn) =>
+      btn.classList.remove("active-tab")
+    );
+    document.getElementById("btn-" + code).classList.add("active-tab");
+
+    // 👉 Tự động giãn textarea khi hiển thị tab
+    const textareas = activeDiv.querySelectorAll("textarea.auto-resize");
+    textareas.forEach((ta) => {
+      ta.style.height = "auto";
+      ta.style.height = ta.scrollHeight + "px";
+    });
+  }
+
+  // Khi trang load lần đầu
+  document.addEventListener("DOMContentLoaded", function () {
+    const activeDiv = document.querySelector(".version-block:not(.hidden)");
+    if (activeDiv) {
+      const textareas = activeDiv.querySelectorAll("textarea.auto-resize");
+      textareas.forEach((ta) => {
+        ta.style.height = "auto";
+        ta.style.height = ta.scrollHeight + "px";
+      });
+    }
+  });
+    </script>
+
+
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+  const link = document.getElementById("add-to-bank-link");
+  const examSetId = link.dataset.examSetId;
+
+  // Gọi để kiểm tra bộ đề đã có trong ngân hàng chưa
+  fetch(`/check-exam-set-in-bank/${examSetId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.exists) {
+        link.style.display = "inline-block"; // Hiện nếu chưa có
+      }
+    })
+    .catch(err => console.error("Lỗi kiểm tra:", err));
+
+  // Gửi POST khi người dùng click vào link
+  link.addEventListener("click", function (e) {
+    e.preventDefault();
+    fetch(`/add-exam-set-to-bank/${examSetId}`, {
+      method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message || "Đã thêm vào ngân hàng!");
+      link.style.display = "none"; // Ẩn sau khi thêm
+    })
+    .catch(err => {
+      console.error("Lỗi khi thêm vào ngân hàng:", err);
+      alert("Có lỗi xảy ra.");
+    });
+  });
+});
+</script>
+
+  </body>
+</html>

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Đăng Ký{% endblock %}
+
+{% block content %}
+
+<div class="auth-form">
+  <div class="form-container">
+<h2>Đăng ký</h2>
+<form method="post">
+    <label>Username:</label><br>
+    <input type="text" name="username" class="form-control" required><br><br>
+
+    <label>Email:</label><br>
+    <input type="email" name="email" class="form-control" required><br><br>
+
+    <label>Mật khẩu:</label><br>
+    <input type="password" name="password" class="form-control"  required><br><br>
+
+    <button type="submit">Tạo tài khoản</button>
+</form>
+
+<p>Đã có tài khoản? <a href="{{ url_for('auth.login') }}">Đăng nhập</a></p>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Gắn JS ở cuối -->
+<script src="{{ url_for('static', filename='formValidator.js') }}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    initFormValidation({
+      fields: {
+        username: {
+          selector: 'input[name="username"]',
+          rules: {
+            required: true,
+            minLength: 3,
+            maxLength: 50,
+            noEmoji: true,
+            noSpecialChars: true
+          },
+          errorMessage: "Tên chỉ chứa chữ cái, số và khoảng trắng, không dùng emoji hoặc ký tự đặc biệt."
+        },
+        password: {
+          selector: 'input[name="password"]',
+          rules: {
+            required: true,
+            strongPassword: true
+          },
+          errorMessage: "Mật khẩu phải từ 8 ký tự trở lên, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
+        }
+      }
+    });
+  });
+</script>
+
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+{% endblock %}

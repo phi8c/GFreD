@@ -1,0 +1,152 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f7fa;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 30px;
+}
+
+.question-block {
+  border: 1px solid #ccc;
+  padding: 20px;
+  margin-bottom: 24px;
+  border-radius: 10px;
+  background-color: #fdfdfd;
+  box-shadow: 0 0 5px rgba(0,0,0,0.05);
+}
+
+label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 6px;
+}
+
+input[type="text"], select {
+  width: 90%;
+  height: auto;
+  min-height: 60px;
+  padding: 10px;
+  resize: vertical;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+textarea{
+
+  width: 95%;
+  height: auto;
+  min-height: 60px;
+  padding: 10px;
+  resize: vertical;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+
+}
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button[type="submit"], button[formmethod="POST"] {
+  background-color: #3498db;
+  color: white;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+}
+.duplicate-question {
+  background-color: #ffe5e5;
+  border-left: 4px solid red;
+  padding-left: 10px;
+  margin-bottom: 10px;
+}
+
+
+@media (max-width: 576px) {
+  .container {
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 1.3em;
+  }
+
+  .question-block {
+    padding: 15px;
+  }
+
+  input[type="text"],
+  select,
+  textarea {
+    width: 100%;
+    font-size: 1em;
+    min-height: 50px;
+  }
+
+  .options {
+    display: block;
+  }
+
+  .option {
+    margin-bottom: 10px;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+
+  button[type="button"],
+  select#num_versions {
+    width: 100%;
+    font-size: 1em;
+    margin-top: 12px;
+  }
+}
+

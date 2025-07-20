@@ -1,0 +1,99 @@
+.exam-container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+    background-color: #fff;
+}
+
+.student-info {
+    margin-bottom: 20px;
+    font-size: 1em;
+}
+
+.camera-box, #screenPreview {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#studentCamera {
+    width: 100%;
+    max-width: 300px;
+    border: 1px solid #ccc;
+}
+
+#screenPreview {
+    width: 100%;
+    max-width: 300px;
+}
+
+button#shareScreenBtn {
+    display: block;
+    margin: 10px auto 20px;
+    padding: 10px 20px;
+    font-size: 1em;
+}
+
+.question {
+    margin-bottom: 25px;
+}
+
+.question h4 {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.options label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+
+.submit-btn {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.submit-btn button {
+    padding: 12px 24px;
+    font-size: 1.1em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.submit-btn button:hover {
+    background-color: #0056b3;
+}
+
+/* === Responsive for Mobile === */
+@media (max-width: 576px) {
+    .exam-container {
+        padding: 15px;
+    }
+
+    .student-info p {
+        font-size: 0.95em;
+    }
+
+    .question h4 {
+        font-size: 1em;
+    }
+
+    .options label {
+        font-size: 0.95em;
+    }
+
+    button#shareScreenBtn,
+    .submit-btn button {
+        width: 100%;
+        font-size: 1em;
+    }
+
+    #studentCamera,
+    #screenPreview {
+        width: 100%;
+        max-width: none;
+    }
+}

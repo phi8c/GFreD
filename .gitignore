@@ -1,0 +1,28 @@
+# 👉 Bỏ qua file cấu hình môi trường (rất quan trọng)
+.env
+
+# 👉 Bỏ qua thư mục chứa file người dùng upload
+app/uploads/
+
+# 👉 Bỏ qua thư mục môi trường ảo Python
+venv/
+.env/
+*.egg-info/
+
+# 👉 Bỏ qua file cache & compiled Python
+__pycache__/
+*.py[cod]
+
+# 👉 Bỏ qua log hoặc file build
+*.log
+*.sqlite3
+*.db
+
+# 👉 Bỏ qua các thư mục của IDE
+.vscode/
+.idea/
+
+# 👉 Bỏ thư mục build tạm (nếu có export PDF, DOCX,...)
+exports/
+temp/
+build/

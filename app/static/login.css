@@ -1,0 +1,40 @@
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card-body {
+    padding: 30px;
+}
+
+.card h2 {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+    .card-body {
+        padding: 20px;
+    }
+
+    .card h2 {
+        font-size: 1.5em;
+    }
+}

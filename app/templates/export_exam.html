@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chọn Bộ Đề để Xuất</title>
+</head>
+<body>
+    <h2>Chọn Bộ Đề để Xuất File Mã Đề & Đáp Án</h2>
+    <form method="get" action="/export-exam">
+        <label for="exam_set_id">Bộ đề:</label>
+        <select name="exam_set_id" required>
+            {% for exam in exam_sets %}
+                <option value="{{ exam.id }}">{{ exam.set_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">📤 Xuất đề và đáp án</button>
+    </form>
+</body>
+</html>

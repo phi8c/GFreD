@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Trang Giới Thiệu{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section section" id="hero">
+    <div class="content fade-in">
+        
+        <h1>Chào mừng đến với <strong>ReturnQ</strong> – Sáng tạo câu hỏi, Dễ dàng hơn bao giờ hết!</h1>
+        <p>Bạn đang tìm kiếm giải pháp tạo đề thi, câu hỏi trắc nghiệm một cách nhanh chóng và hiệu quả? <strong>ReturnQ</strong> chính là công cụ bạn cần! Ứng dụng AI đột phá của chúng tôi giúp bạn biến mọi tài liệu bài giảng thành hàng trăm câu hỏi đa dạng chỉ trong tích tắc.</p>
+    </div>
+</section>
+
+<!-- Feature 1 -->
+<section class="feature-section section" id="feature-1">
+    <div class="content slide-in-left">
+        <h2>Biến Bài Giảng Thành Đề Thi Chỉ Trong Nháy Mắt</h2>
+        <p>Chỉ cần tải lên file bài giảng (PDF, Word, PowerPoint...), công nghệ AI tiên tiến của chúng tôi sẽ tự động phân tích nội dung và tạo ra bộ câu hỏi phong phú, chính xác.</p>
+        <div class="icon-transformation">
+            <img src="{{ url_for('static', filename='icons/Produce.png') }}" alt="File Bài Giảng" class="icon-lecture">
+            <span class="arrow-right">→</span>
+            <img src="{{ url_for('static', filename='icons/Produce.png') }}" alt="Đề Thi" class="icon-exam">
+        </div>
+    </div>
+</section>
+
+<!-- Feature 2 -->
+<section class="feature-section section" id="feature-2">
+    <div class="content slide-in-right">
+        <h2>Đa Dạng Loại Câu Hỏi – Khơi Gợi Mọi Khía Cạnh Kiến Thức</h2>
+        <p>Không chỉ dừng lại ở câu hỏi trắc nghiệm đơn thuần, nền tảng còn sinh ra nhiều dạng câu hỏi khác nhau để đánh giá toàn diện.</p>
+        <div class="question-types">
+            <div class="q-type fade-in-up delay-1">Trắc Nghiệm</div>
+            <div class="q-type fade-in-up delay-2">Điền Khuyết</div>
+            <div class="q-type fade-in-up delay-3">Đúng/Sai</div>
+            <div class="q-type fade-in-up delay-4">Tự Luận</div>
+        </div>
+    </div>
+</section>
+
+<!-- Feature 3 -->
+<section class="feature-section section" id="feature-3">
+    <div class="content scale-up">
+        <h2>Tốc Độ Vượt Trội & Tự Động Hóa Toàn Diện</h2>
+        <p>Với công nghệ AI mạnh mẽ, bạn có thể tạo ra hàng trăm câu hỏi chỉ trong vài giây. Mọi thứ đều tự động!</p>
+        <div class="speed-indicator">
+            <img src="{{ url_for('static', filename='icons/Exmcode.png') }}" alt="Tốc Độ" class="speed-icon">
+            <span class="speed-text">Siêu Tốc!</span>
+        </div>
+    </div>
+</section>
+
+<!-- Feature 4 -->
+<section class="feature-section section" id="feature-4">
+    <div class="content fade-in">
+        <h2>Kết Hợp Hoàn Hảo với Phòng Thi Online</h2>
+        <p>Dễ dàng xuất các bộ câu hỏi đã tạo sang định dạng tương thích với nền tảng thi trực tuyến. An toàn & hiệu quả.</p>
+        <div class="integration-icons">
+            <img src="{{ url_for('static', filename='icons/room.png') }}" alt="Web App Logo" class="app-logo">
+            <span class="plus-icon">+</span>
+            <img src="{{ url_for('static', filename='icons/roomv.png') }}" alt="Phòng Thi" class="online-exam-logo">
+        </div>
+    </div>
+</section>
+<section class="final-section section" id="final-brand">
+    <div class="content fade-in">
+        <h1 class="brand-name">ReturnQ</h1>
+        <div class="brand-est-info">
+            <span class="est-text">EST</span>
+            <span class="year-text">2025</span>
+        </div>
+    </div>
+</section>
+{% endblock %}

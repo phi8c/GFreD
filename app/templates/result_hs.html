@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả bài thi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='result_hs.css') }}">
+</head>
+<body>
+
+<div class="result-container">
+    <h1>🎉 Bạn đã hoàn thành bài thi!</h1>
+
+    <div class="info">
+        <p><strong>Họ tên:</strong> {{ student_name }}</p>
+        <p><strong>Mã sinh viên:</strong> {{ student_code }}</p>
+        <p><strong>Mã đề:</strong> {{ exam_code }}</p>
+        <p><strong>Phòng thi:</strong> {{ room_code }}</p>
+    </div>
+
+    <div class="score">{{ score }} / 10 điểm</div>
+
+    <a href="/" class="btn">Quay về trang chủ</a>
+</div>
+
+</body>
+
+<script>
+  // Xóa cache của trang trước để khi quay lại sẽ không còn giao diện làm bài
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function () {
+      window.history.go(1);  // Ngăn quay lại
+    };
+  }
+</script>
+
+</html>

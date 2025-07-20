@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chi tiết bài thi</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='student_exam_detail.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Tiêu đề -->
+      <div class="exam-header">Chi tiết bài thi</div>
+
+      <!-- Chi tiết sinh viên -->
+      <div class="student-info-box">
+        <p><strong>Tên sinh viên:</strong> {{ student_exam.student_name }}</p>
+        <p><strong>Mã sinh viên:</strong> {{ student_exam.student_code }}</p>
+        <p><strong>Lớp:</strong> {{ student_exam.class_name }}</p>
+        <p><strong>Môn thi:</strong> {{ student_exam.subject_name }}</p>
+        <p><strong>Mã phòng:</strong> {{ student_exam.room_code }}</p>
+        <p>
+          <strong>Ngày bắt đầu:</strong>
+          {% if student_exam.start_time %} {{
+          student_exam.start_time.strftime('%d/%m/%Y %H:%M') }} {% else %} Chưa
+          bắt đầu {% endif %}
+        </p>
+
+        <p>
+          <strong>Trạng thái nộp bài:</strong>
+          {% if student_exam.submitted %} Đã nộp {% else %} Chưa nộp {% endif %}
+        </p>
+        <p>
+          <strong>Điểm:</strong> {{ student_exam.score if student_exam.score is
+          not none else 'Chưa chấm' }}
+        </p>
+      </div>
+
+      <!-- Bài thi chi tiết -->
+      <div class="exam-content">
+        {% for q in questions %}
+        <div class="question-block">
+          <p class="question-text">
+            <strong>Câu {{ loop.index }}:</strong> {{ q.question_text }}
+          </p>
+
+          {% if q.type == 'MCQ' %}
+          <ul class="options">
+            {% for option in q.options %}
+            <li
+              class="{% if option.label == q.selected_answer %} selected {% endif %} {% if option.label == q.correct_answer %} correct {% endif %} {% if option.label == q.selected_answer and not q.is_correct %} wrong {% endif %}"
+            >
+              {{ option.label }}. {{ option.text }}
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="answer-summary">
+            <span>Đáp án đúng: <strong>{{ q.correct_answer }}</strong></span>
+            {% if q.selected_answer %}
+            <span>
+              - Sinh viên chọn: <strong>{{ q.selected_answer }}</strong></span
+            >
+            {% else %}
+            <span> - Sinh viên chưa chọn</span>
+            {% endif %}
+          </div>
+
+          {% elif q.type == 'TF' %}
+          <ul class="options">
+            {% for st in q.statements %}
+            <li
+              class="{% if st.is_correct and st.student_choice == st.is_correct %}correct{% elif st.student_choice != st.is_correct %}wrong{% endif %}"
+            >
+              ({{ st.label }}) {{ st.content }} {% if st.student_choice is not
+              none %} - Sinh viên chọn:
+              <strong>{{ 'Đúng' if st.student_choice else 'Sai' }}</strong> {%
+              else %} - <em>Chưa chọn</em>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+
+          {% elif q.type == 'SA' %}
+          <div class="short-answer-box">
+            <p><strong>Trả lời của sinh viên:</strong></p>
+            <div class="{% if q.is_correct %}correct{% else %}wrong{% endif %}">
+              {{ q.answer_text or "Chưa trả lời" }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </body>
+</html>

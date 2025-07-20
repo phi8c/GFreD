@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Danh sách phòng thi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='room_management.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1 class="heading">Danh sách phòng thi</h1>
+
+    <!-- Bộ lọc -->
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Tìm kiếm phòng thi..." class="filter-input" />
+      <label>Từ ngày: <input type="date" class="filter-date" /></label>
+      <label>Đến ngày: <input type="date" class="filter-date" /></label>
+      <button class="filter-button">Lọc</button>
+    </div>
+
+    <!-- Danh sách phòng thi -->
+   <div class="room-list">
+  {% for room in exam_rooms %}
+    <div class="room-card" onclick="goToRoom('{{ room.id }}')">
+      <div class="room-info">
+        <h2 class="room-name">{{ room.subject_name }}</h2>
+        <p class="room-code">Mã: {{ room.room_code }}</p>
+        <p class="room-time">Ngày tạo: {{ room.created_at.strftime('%d/%m/%Y') }}</p>
+        <!-- Có thể thêm trường "đã thi bao nhiêu sinh viên" sau nếu cần -->
+      </div>
+      <button class="delete-room-btn" onclick="event.stopPropagation(); confirmDeleteRoom('{{ room.room_code }}', '{{ room.subject_name }}', '{{ room.created_at.strftime('%d/%m/%Y') }}')">
+        🗑️
+      </button>
+    </div>
+  {% endfor %}
+</div> 
+
+
+  <script>
+    function goToRoom(roomId) {
+      // Chuyển hướng đến trang chi tiết phòng thi
+      window.location.href = `/statistical-room/${roomId}`;
+
+    }
+  </script>
+
+  <script>
+  document.getElementById('searchInput').addEventListener('input', function() {
+    const searchValue = this.value.toLowerCase();
+    const rooms = document.querySelectorAll('.room-card');
+
+    rooms.forEach(room => {
+      const name = room.querySelector('.room-name').textContent.toLowerCase();
+      if (name.includes(searchValue)) {
+        room.style.display = 'block';
+      } else {
+        room.style.display = 'none';
+      }
+    });
+  });
+
+
+// đoạn này mới thêm vào để validations
+
+
+function containsInvalidSearchInput(str) {
+  return /[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/u.test(str);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("searchInput");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      if (containsInvalidSearchInput(searchInput.value)) {
+        searchInput.value = searchInput.value.replace(/[\p{Emoji}\u{1F600}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, '');
+        searchInput.style.border = "1px solid red";
+
+        if (!searchInput.nextElementSibling || !searchInput.nextElementSibling.classList.contains('error')) {
+          const error = document.createElement("div");
+          error.className = "error";
+          error.style.color = "red";
+          error.style.fontSize = "0.85em";
+          error.style.marginTop = "4px";
+          error.innerText = "Không được nhập emoji hoặc ký tự đặc biệt.";
+          searchInput.parentNode.appendChild(error);
+          setTimeout(() => error.remove(), 2000);
+        }
+      } else {
+        searchInput.style.border = "";
+      }
+    });
+  }
+});
+
+</script>
+<script>
+  function confirmDeleteRoom(roomCode, subjectName, createdAt) {
+    const confirmed = confirm(
+      `⚠️ Bạn có chắc chắn muốn xóa phòng "${subjectName}" (Mã: ${roomCode}) được tạo ngày ${createdAt}?\nHành động này sẽ xóa toàn bộ dữ liệu liên quan đến phòng này!`
+    );
+
+    if (confirmed) {
+      fetch(`/delete-room/${roomCode}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "success") {
+            alert("✅ Đã xóa phòng thành công!");
+            location.reload();
+          } else {
+            alert("❌ Lỗi: " + data.message);
+          }
+        })
+        .catch(() => {
+          alert("❌ Lỗi kết nối khi xóa phòng.");
+        });
+    }
+  }
+</script>
+
+
+</body>
+</html>

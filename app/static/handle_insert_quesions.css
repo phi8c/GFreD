@@ -1,0 +1,161 @@
+/* style.css */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align items to the top */
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: 100%;
+    margin-top: 30px; /* Add some space from the top */
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    font-size: 2em;
+}
+
+.note {
+    background-color: #e9f5fd;
+    border-left: 5px solid #3498db;
+    padding: 15px 20px;
+    margin-bottom: 25px;
+    border-radius: 5px;
+    font-size: 0.95em;
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+.note strong {
+    color: #2980b9;
+}
+
+.note ul {
+    list-style: inside;
+    padding-left: 0;
+    margin-top: 10px;
+}
+
+.note ul li {
+    margin-bottom: 5px;
+}
+
+/* Flash Messages Styling */
+.flashes {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.flashes li {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-weight: bold;
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+}
+
+.flashes li.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.flashes li.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #ffeeba;
+}
+
+.flashes li.danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.flashes li.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+/* Form Styling */
+form div {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+    font-size: 1.05em;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="file"] {
+    width: calc(100% - 22px); /* Adjust for padding and border */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    font-size: 1em;
+}
+
+input[type="file"] {
+    padding: 8px; /* Files inputs look better with less padding */
+}
+
+
+
+small {
+    display: block;
+    margin-top: 5px;
+    color: #777;
+    font-size: 0.85em;
+}
+
+.required-star {
+    color: #e74c3c;
+}
+
+button[type="submit"] {
+    background-color: #28a745;
+    color: white;
+    padding: 14px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1em;
+    width: 100%;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+button[type="submit"]:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+button[type="submit"]:active {
+    transform: translateY(0);
+}

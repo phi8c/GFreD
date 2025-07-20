@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tạo mã đề</title>
+</head>
+<body>
+    <h1>Tạo mã đề trộn</h1>
+    <button onclick="generateExams()">Tạo mã đề</button>
+    <p id="status"></p>
+    <script>
+        function generateExams() {
+            const formData = new FormData();
+             formData.append("user_id", 1);
+             formData.append("exam_set_id", 8);
+             formData.append("num_versions", 4);
+            fetch('/generate-exams', { method: 'POST',
+            body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("status").innerText = data.message;
+                })
+                .catch(err => {
+                   document.getElementById("status").innerText = "Lỗi: " + err;
+                }); 
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Phòng Thi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='manage_room.css') }}">
+    <style>
+        .container {
+            padding: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        .student-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            position: relative;
+            background: #f9f9f9;
+        }
+        .video-preview {
+            width: 100%;
+            height: 180px;
+            background: #000;
+        }
+        .status {
+            margin-top: 8px;
+            font-weight: bold;
+            color: green;
+        }
+
+    </style>
+  
+  
+<body>
+<div class="container">
+  <div class="exam-info-box">
+    <h2>Phòng thi: {{ room_code }}</h2>
+    
+        <a href="{{ url_for('question.index') }}" class="back-btn">← Quay lại trang chính</a>
+        ⏰ Thời gian còn lại của phòng thi: <span id="room-countdown"></span>
+
+
+        <!-- Nút kết thúc sớm (ẩn lúc đầu) -->
+      
+      <button id="endRoomBtn" data-room-code="{{ room_code }}" style="display: none;">🛑 Kết thúc phòng thi</button>
+
+
+        <!-- Nút hiện sau khi phòng đã kết thúc -->
+      <button id="openFullscreenBtn">🔍 Chế độ phóng to</button>
+      <div id="afterEndBtns" style="display: none;">
+      <button onclick="showScorePopup()">📊 Thống kê nhanh</button>
+      <a href="/exam-room-summary/{{ room_code }}">📋 Chi tiết phòng thi</a>
+      </div>
+        <!-- POP UP GHI LOG MỚI THÊM VÀO -->
+
+        <!-- Nút bật popup -->
+      <button onclick="toggleLogPopup()" style="margin-bottom: 10px;">📋 Nhật ký giám sát</button>
+
+<!-- Popup log -->
+      <div id="logPopup" style="display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+        background: white; border: 1px solid #ccc; padding: 20px; z-index: 1000; max-height: 70%; overflow-y: auto; width: 600px; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
+        <h3>📋 Nhật ký hành vi sinh viên</h3>
+        <div id="logContent"></div>
+        <button onclick="toggleLogPopup()" style="margin-top: 10px;">Đóng</button>
+      </div>
+
+
+        <!-- KẾT THÚC POP UP GHI LOG -->
+
+
+      </div>
+    <div id="studentGrid" class="grid">
+
+      <!-- đây là html mới thêm vào để đánh dấu sinh viên-->
+
+      <div id="markedStudents" class="grid-subsection"></div>
+      <div id="unmarkedStudents" class="grid-subsection"></div>
+
+
+      <!--  ############################ -->
+        
+    </div>
+
+    <h3>⛔ Sinh viên bị chặn</h3>
+  <div id="kickedStudentsSection" class="grid kicked-grid">
+    <!-- Các sinh viên bị chặn sẽ được render tại đây -->
+  </div>
+  <div class="approval-sidebar" id="approvalSidebar">
+  <button id="closeSidebarBtn" class="sidebar-toggle-btn">☰</button>
+  <h3>🕒 Danh sách chờ duyệt</h3>
+  <div id="waiting-approval-list"></div>
+  
+</div>
+<button id="openSidebarBtn" class="open-sidebar-button">📥</button>
+
+
+</div>
+
+<!-- Modal pop-up giám sát -->
+<div id="fullscreenMonitor" class="fullscreen-modal hidden">
+  <div class="monitor-content">
+    <button id="closeFullscreenBtn">✖ Đóng</button>
+
+    <div class="student-video-area">
+      <video id="fullscreen-camera" autoplay muted playsinline></video>
+      <video id="fullscreen-screen" autoplay muted playsinline></video>
+    </div>
+
+    <div class="control-panel">
+      <button id="prevStudentBtn">⬅</button>
+      <button id="nextStudentBtn">➡</button>
+    </div>
+
+    <div class="student-list">
+      <ul id="studentList"></ul>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+<script>
+    // TODO: 
+    const roomCode = "{{ room_code }}";
+  const socket = io('/webrtc', {
+  path: '/socket.io',
+  transports: ['websocket', 'polling']
+});
+
+
+
+  socket.on('connect', () => {
+    socket.emit('join_room', { room: roomCode });
+    console.log("✅ room code", roomCode );
+    console.log("✅ Kết nối socket thành công");
+  });
+
+  socket.on('new-student-joined', (data) => {
+    console.log("🎯 Nhận được new-student-joined", data);
+    console.log("✅ room code của data", data.room_code );
+    if (data.room !== roomCode) return;
+
+    //console.log("📩 Nhận offer:", data);
+    //console.log("🔍 videoEl:", document.getElementById(`remoteVideo-${type}-${student_code}`));
+
+    console.log("📩 Nhận offer từ sinh viên:", data.student_code);
+
+
+
+    const grid = document.getElementById('studentGrid');
+    const box = document.createElement('div');
+    box.className = 'student-box';
+    box.id = `box-${data.student_code}`;
+    box.innerHTML = `
+    <div  class="box-header">
+    <div class="menu-wrapper">
+      <button class="menu-button" onclick="toggleMenu('${data.student_code}')">⋮</button>
+      <div class="dropdown-menu" id="menu-${data.student_code}">
+        <button onclick="highlightStudent('${data.student_code}')">🔖 Đánh dấu</button>
+        <button onclick="kickStudent('${data.student_code}')">👢 Kick</button>
+        <button onclick="blockStudent('${data.student_code}')">⛔ Chặn</button>
+      </div>
+    </div>
+  </div>
+        <strong>${data.student_name}</strong><br>
+        Mã SV: ${data.student_code}<br>
+       <div class="video-preview">
+      <video id="remoteVideo-camera-${data.student_code}" autoplay playsinline muted width="150" height="100"></video>
+      <video id="remoteVideo-screen-${data.student_code}" autoplay playsinline muted width="150" height="100"></video>
+      </div>
+      <div class="status">🟢 Vừa vào phòng</div>
+      ${data.status === 'submitted' ? `<div class="score">🎯 Điểm: ${data.score}</div>` : ''}
+    `;
+    //grid.appendChild(box);
+    document.getElementById('unmarkedStudents').appendChild(box);
+  });
+  socket.on('exam_started', (data) => {
+    if (data.room_code !== roomCode) return;
+
+    const allBoxes = document.querySelectorAll('.student-box');
+    for (let box of allBoxes) {
+        if (box.innerHTML.includes(data.student_code)) {
+            const statusDiv = box.querySelector('.status');
+            if (statusDiv) {
+                statusDiv.textContent = '✅ Đang làm bài';
+                statusDiv.style.color = 'green';
+            }
+        }
+    }
+});
+
+
+</script>
+<script>
+    //const socket = io('/', { path: '/socket.io', transports: ['websocket'] });
+    const room = "{{ room_code }}";
+    const peerConnections = {};
+    
+    //socket.emit('join_room', { room: room });
+    
+    // Gắn video vào box sinh viên đã render trước đó
+    socket.on('offer', async data => {
+        const studentCode = data.student_code || 'unknown';
+        const type = data.type || 'camera';
+    
+        const pc = new RTCPeerConnection();
+        if (!peerConnections[studentCode]) peerConnections[studentCode] = {};
+        peerConnections[studentCode][type] = pc;
+    
+        //await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+        pc.ontrack = event => {
+        
+        console.log("📹 Nhận được track từ sinh viên", event.track.kind);
+    
+        const stream = new MediaStream();
+        stream.addTrack(event.track);
+        const videoEl = document.getElementById(`remoteVideo-${type}-${studentCode}`);
+        videoEl.autoplay = true;
+        videoEl.playsInline = true;
+        videoEl.muted = true;
+        
+        if (videoEl) { 
+          videoEl.srcObject = stream;
+          // 🟡 Lưu studentCode vào localStorage (chỉ 1 lần)
+          const key = `connectedStudents-${roomCode}`;  // roomCode phải là biến toàn cục
+          const connected = JSON.parse(localStorage.getItem(key) || "[]");
+
+          if (!connected.includes(studentCode)) {
+          connected.push(studentCode);
+          localStorage.setItem(key, JSON.stringify(connected));
+          }
+
+          videoEl.onloadedmetadata = () => {
+            videoEl.play().catch(err => console.warn("Không thể phát video:", err));
+            };
+
+          
+          console.log("🎥 Nhận được track", event.track);
+          //stream.addTrack(event.track);
+          console.log("🎥 Gán stream vào video element", videoEl.id);
+        } else {
+          console.warn("❗ Không tìm thấy video element", `remoteVideo-camera-${student_code}`);
+
+        }
+        
+
+    };
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+    
+        //pc.ontrack = event => stream.addTrack(event.track);
+    
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('answer', { room: room,  answer, type, student_code: studentCode });
+    
+        pc.onicecandidate = event => {
+            if (event.candidate) {
+                socket.emit('ice-candidate', {
+                    room: room,
+                    candidate: event.candidate,
+                    type: type,
+                    student_code: studentCode
+                });
+            }
+        };
+    });
+    socket.on('ice-candidate', data => {
+        const { student_code, type, candidate } = data;
+        const pc = peerConnections[student_code]?.[type];
+        if (pc) {
+            pc.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+    });
+
+    // đoạn này mới thêm vào bắt sự kiện sinh viên emit khi nộp bài
+
+  socket.on('student_submitted', (data) => {
+  console.log("📥 Nhận dữ liệu:", data);
+  const studentCode = data.student_code;
+  const studentBox = document.getElementById(`box-${studentCode}`);
+
+  if (studentBox) {
+    const statusEl = studentBox.querySelector('.status');
+    if (statusEl) {
+      statusEl.textContent = '📤 Đã nộp bài';
+      statusEl.style.color = 'gray';
+    }
+
+    // 🔢 Hiển thị điểm nếu có
+    if (data.score !== undefined) {
+      let scoreEl = studentBox.querySelector('.score');
+      if (!scoreEl) {
+        scoreEl = document.createElement('div');
+        scoreEl.className = 'score';
+        studentBox.appendChild(scoreEl);
+      }
+      scoreEl.textContent = `🎯 Điểm: ${data.score}`;
+      scoreEl.style.color = '#2e7d32';  // màu xanh
+      scoreEl.style.marginTop = '4px';
+    }
+
+    // Làm mờ khung video nếu muốn
+    const videos = studentBox.querySelectorAll('video');
+    videos.forEach(video => {
+      video.style.opacity = '0.05';
+    });
+
+    // Di chuyển box xuống cuối danh sách
+    const grid = document.getElementById('studentGrid');
+    if (grid && studentBox.parentNode === grid) {
+      grid.removeChild(studentBox);
+      grid.appendChild(studentBox);  // đưa xuống cuối
+    }
+  }
+});
+
+
+socket.on("remove_student", (data) => {
+  const studentCode = data.student_code;
+  const studentBox = document.getElementById(`box-${studentCode}`);
+  if (studentBox) {
+    studentBox.remove();
+    console.log(`Đã xóa box của sinh viên ${studentCode}`); 
+  }
+});
+
+
+
+////// ĐOẠN NÀY MỚI THÊM VÀO ĐỂ BẮT LOG VÀ HIỂN THỊ VI PHẠM
+
+// Bắt log từ sinh viên
+socket.on("new_log", (log) => {
+    console.log("Nhận được log");
+    addLogToPopup(log);
+});
+
+
+function addLogToPopup(log) {
+    const logBox = document.getElementById("logContent");
+
+    const line = document.createElement("p");
+    line.innerHTML = `🕒 <strong>${formatTime(log.time)}</strong> – <strong>${log.student}</strong>: <em>${log.type}</em> ${log.detail ? `– ${log.detail}` : ''}`;
+    line.style.borderBottom = "1px solid #eee";
+    line.style.padding = "5px 0";
+    logBox.prepend(line);
+}
+
+// Hiện/ẩn popup
+function toggleLogPopup() {
+    const popup = document.getElementById("logPopup");
+    popup.style.display = popup.style.display === "none" ? "block" : "none";
+}
+
+// Format thời gian ISO thành dạng hh:mm:ss
+function formatTime(isoStr) {
+    const date = new Date(isoStr);
+    return date.toLocaleTimeString();
+}
+
+
+
+///// KẾT THÚC ĐOẠN BẮT LOG
+
+
+
+
+
+    // kết thúc bắt sự kiện sinh viên emit khi nộp bài
+    // mới thêm vào
+
+    socket.on('student_waiting_approval', (data) => {
+    if (data.room_code !== room) return;
+
+    const waitingList = document.getElementById('waiting-approval-list');
+    if (!waitingList) return;
+
+    const studentCode = data.student_code;
+    const studentName = data.student_name;
+
+    // Kiểm tra nếu đã có trong danh sách thì không thêm lại
+    if (document.getElementById(`waiting-${studentCode}`)) return;
+
+    const item = document.createElement('div');
+    item.className = 'waiting-student';
+    item.id = `waiting-${studentCode}`;
+    item.innerHTML = `
+      <strong>${studentName}</strong> (MSSV: ${studentCode})<br>
+      <button onclick="approveWaitingStudent('${studentCode}')">✅ Duyệt</button>
+      <button onclick="rejectStudent('${studentCode}')">❌ Từ chối</button>
+      <hr>
+    `;
+    waitingList.appendChild(item);
+});
+function approveWaitingStudent(studentCode) {
+    socket.emit('approve_student', { room: room, student_code: studentCode });
+    const item = document.getElementById(`waiting-${studentCode}`);
+    if (item) item.remove();
+}
+
+function rejectStudent(studentCode) {
+    socket.emit('reject_student', { room: room, student_code: studentCode });
+    const item = document.getElementById(`waiting-${studentCode}`);
+    if (item) item.remove();
+}
+
+
+
+    // kết thúc đoạn mới thêm vào
+    
+
+    </script>
+    <script>
+  const examEndTime = new Date("{{ exam_end_time }}");  // từ Flask render ra
+  const examStartTime = new Date("{{ exam_start_time }}");
+  //const roomCode = "{{ room_code }}";  // mã phòng hiện tại
+
+  let examEnded = false;
+  let submissionCheckInterval = null;
+  let timerInterval;
+
+  function updateRoomCountdown() {
+    const now = new Date();
+    
+    const countdownEl = document.getElementById("room-countdown");
+
+  if (now < examStartTime) {
+    const mins = Math.floor((examStartTime - now) / 60000);
+    const secs = Math.floor(((examStartTime - now) % 60000) / 1000);
+    countdownEl.textContent = `⏳ Chưa đến giờ thi - còn ${mins} phút ${secs < 10 ? '0' : ''}${secs} giây`;
+    return;
+  }
+
+  const remaining = examEndTime - now;
+
+  if (remaining <= 0) {
+    countdownEl.textContent = "⏰ Hết giờ";
+   
+    clearInterval(timerInterval);
+
+    fetch(`/goto-statistical/${room}`, { method: "POST" })
+    .then(res => {
+    if (res.redirected) {
+      window.location.href = res.url;
+    }
+    })
+    .catch(err => {
+    console.error("❌ Lỗi khi chuyển hướng đến trang thống kê:", err);
+    });
+
+  } else {
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    countdownEl.textContent = `${mins} phút ${secs < 10 ? '0' : ''}${secs} giây`;
+  }
+  }
+
+timerInterval = setInterval(updateRoomCountdown, 1000);
+updateRoomCountdown();  // Gọi ngay lần đầu
+
+function showScorePopup() {
+  if (examEnded) return; // ✅ tránh hiển thị trùng
+  examEnded = true;
+  document.getElementById("score-popup").classList.remove("hidden");
+  loadStatistics(room); // gọi hàm lấy danh sách điểm + vẽ biểu đồ
+  if (submissionCheckInterval) {
+    clearInterval(submissionCheckInterval);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const closeBtn = document.getElementById("close-popup");
+  const popup = document.getElementById("score-popup");
+
+  if (closeBtn && popup) {
+    closeBtn.addEventListener("click", () => {
+      popup.classList.add("hidden");
+    });
+  } else {
+    console.warn(" Không tìm thấy phần tử close-popup hoặc score-popup trong DOM.");
+  }
+});
+
+
+
+// Bắt đầu đếm thời gian
+
+
+// Kiểm tra định kỳ mỗi 5 giây nếu chưa hết giờ
+// submissionCheckInterval = setInterval(() => {
+ // checkToShowPopup(false); // Điều kiện 2: sinh viên đã nộp hết
+//}, 50000);
+</script>
+
+<!-- hàm load này mới thêm vào-->
+
+<script>
+  //const roomforstatic = "{{ room_code }}";
+  console.log("📩 Kiểm tra mã phòng:", room);
+  async function loadStatistics(room) {
+    try {
+      const response = await fetch(`/api/statistics/${room}`);
+      const data = await response.json();
+      console.log("📩 in ra data:", data);
+
+      if (!data.success) {
+        console.error("Không thể tải thống kê điểm.");
+        return;
+      }
+
+      // Hiển thị danh sách sinh viên theo nhóm điểm
+      displayStudentList("excellent-list", data.groups.high);
+      displayStudentList("good-list", data.groups.good);
+      displayStudentList("poor-list", data.groups.low);
+
+      // Vẽ phổ điểm
+      renderScoreChart(data.score_distribution);
+
+      // Hiện popup lên
+      document.getElementById("score-popup").style.display = "flex";
+
+    } catch (error) {
+      console.error("Lỗi khi tải thống kê điểm:", error);
+    }
+  }
+  
+
+  function displayStudentList(containerId, studentList) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+
+    if (studentList.length === 0) {
+      container.innerHTML = "<p>Không có sinh viên.</p>";
+      return;
+    }
+
+    studentList.forEach(student => {
+      const item = document.createElement("div");
+      item.className = "student-item";
+      item.textContent = `${student.student_name} (${student.student_code}) - ${student.score} điểm`;
+      container.appendChild(item);
+    });
+  }
+
+  function renderScoreChart(scoreDist) {
+    const chartContainer = document.getElementById("score-chart");
+    chartContainer.innerHTML = "";
+
+    for (let score = 0; score <= 10; score++) {
+      const bar = document.createElement("div");
+      bar.className = "score-bar";
+
+      const height = (scoreDist[score] || 0) * 5; // Tăng hệ số nếu muốn cao hơn
+      bar.style.height = `${height}px`;
+      bar.title = `${score}: ${scoreDist[score] || 0} SV`;
+
+      const label = document.createElement("span");
+      label.className = "score-label";
+      label.textContent = score;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "score-bar-wrapper";
+      wrapper.appendChild(bar);
+      wrapper.appendChild(label);
+
+      chartContainer.appendChild(wrapper);
+    }
+  }
+</script>
+<!-- kết thúc hàm load mới thêm vào-->
+
+<!-- đây là javascipt mới thêm vào-->
+
+<script>
+  // Hàm gọi API và hiển thị danh sách sinh viên bị chặn
+  function fetchKickedStudents() {
+    fetch(`/api/kicked-students/${roomCode}`)
+      .then(res => res.json())
+      .then(data => {
+        const kickedSection = document.getElementById('kickedStudentsSection');
+        kickedSection.innerHTML = ''; // Xoá cũ
+
+        data.forEach(student => {
+          const box = document.createElement('div');
+          box.className = 'kicked-student-box';
+          box.innerHTML = `
+            <strong>${student.full_name}</strong><br>
+            Mã SV: ${student.student_id}<br>
+            Lớp: ${student.class_name}<br>
+            <button onclick="approveStudent('${student.student_id}')">✅ Cho phép vào lại</button>
+            <button onclick="blockStudent('${student.student_id}')">❌ Chặn vĩnh viễn</button>
+          `;
+          kickedSection.appendChild(box);
+        });
+      });
+  }
+
+  // Gọi lần đầu và lặp lại mỗi 10 giây
+  fetchKickedStudents();
+  setInterval(fetchKickedStudents, 60000);
+
+  // Các hàm xử lý nút bấm
+  function approveKickedStudent(student_id) {
+    fetch('/unban-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_code: roomCode, student_id })
+    }).then(() => fetchKickedStudents());
+  }
+
+  function blockStudent(studentCode) {
+   socket.emit("ban_student", {
+   room: room,
+  student_code: studentCode
+  });
+  }
+
+  function kickStudent(studentCode) {
+    socket.emit('kick_student', {
+        student_code: studentCode,
+        room: room // cần truyền room để xử lý đúng context
+    });
+}
+
+
+  // Sự kiện mở menu vừa mới thêm vào
+
+  function toggleMenu(studentCode) {
+  const menu = document.getElementById(`menu-${studentCode}`);
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+
+  // Đóng menu khác nếu mở
+  document.querySelectorAll('.dropdown-menu').forEach(m => {
+    if (m.id !== `menu-${studentCode}`) m.style.display = 'none';
+  });
+}
+
+// Optional: ẩn menu khi click ra ngoài
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.menu-wrapper')) {
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+  }
+});
+
+
+// đây là hàm mới thêm vào để đanh dấu và bỏ đánh dấu sinh viên
+
+function highlightStudent(studentCode) {
+  const box = document.getElementById(`box-${studentCode}`);
+  const isMarked = box.getAttribute('data-marked') === 'true';
+
+  if (isMarked) {
+    // Bỏ đánh dấu → chuyển về unmarked
+    document.getElementById('unmarkedStudents').appendChild(box);
+    box.setAttribute('data-marked', 'false');
+    box.style.border = 'none'; // Optional: bỏ hiệu ứng đánh dấu
+  } else {
+    // Đánh dấu → chuyển lên trên
+    document.getElementById('markedStudents').appendChild(box);
+    box.setAttribute('data-marked', 'true');
+    box.style.border = '2px solid red'; // Optional: viền nổi bật
+  }
+
+  // Đóng menu dropdown sau khi chọn
+  document.getElementById(`menu-${studentCode}`).style.display = 'none';
+}
+
+
+// kết thúc hàm đánh dấu và bỏ đanh dấu
+
+
+
+
+
+
+  // két thúc sự kiến sửa menu
+</script>
+
+<script>
+    // Flask truyền vào
+  const checkUrl = `/api/check-all-submitted/${roomCode}`;
+  let submittedCheckInterval = null;
+
+  function checkToShowFinishButton() {
+    fetch(checkUrl)
+      .then(res => res.json())
+      .then(data => {
+        if (data.all_submitted) {
+          const finishBtn = document.getElementById("endRoomBtn");
+          if (finishBtn) {
+            finishBtn.style.display = "block";
+          }
+
+          // Ngừng kiểm tra nữa vì đã đủ điều kiện
+          clearInterval(submittedCheckInterval);
+        }
+      })
+      .catch(err => {
+        console.error("Lỗi khi kiểm tra sinh viên đã nộp bài:", err);
+      });
+  }
+
+  // 👉 Bắt đầu gọi định kỳ từ khi trang load (bạn có thể hoãn lại như yêu cầu sau)
+  window.addEventListener('DOMContentLoaded', () => {
+    submittedCheckInterval = setInterval(checkToShowFinishButton, 60000); // mỗi 10 giây
+  });
+  
+
+
+  // hàm kết thúc
+
+
+
+  document.getElementById("endRoomBtn").addEventListener("click", function () {
+  
+
+  if (!confirm("Bạn có chắc muốn kết thúc phòng thi không?")) return;
+
+  fetch(`/end-exam/${roomCode}`, {
+    method: "POST"
+  })
+  .then(res => {
+    if (res.redirected) {
+      window.location.href = res.url;  // chuyển hướng sang thống kê nhanh
+    } else {
+      alert("Đã kết thúc phòng thi.");
+    }
+  })
+  .catch(err => {
+    console.error("❌ Lỗi khi kết thúc phòng:", err);
+    alert("Có lỗi xảy ra khi kết thúc phòng.");
+  });
+});
+
+</script>
+<script>
+  const students = [];  // Danh sách student_code đang thi
+  let currentIndex = 0;
+
+
+  document.addEventListener("DOMContentLoaded", function () {
+  console.log("🚀 DOM đã sẵn sàng, bắt đầu cập nhật danh sách sinh viên...");
+
+  socket.on("connect", function () {
+    console.log("✅ Socket đã kết nối lại sau reload");
+
+    socket.emit("teacher-rejoined", {
+      roomCode: roomCode  // roomCode đã có sẵn
+      // teacher-rejoined
+    });
+    console.log("đã chạy qua teacher-rejoined")
+  });
+  const key = `connectedStudents-${roomCode}`;  // roomCode phải có sẵn từ Flask
+  const savedStudents = JSON.parse(localStorage.getItem(key) || "[]");
+  const container = document.getElementById("unmarkedStudents"); // hoặc 'studentGrid' nếu bạn dùng tên đó
+
+  savedStudents.forEach(code => {
+    // Nếu ô box chưa tồn tại thì tạo mới
+    if (!document.getElementById(`box-${code}`)) {
+      const box = document.createElement('div');
+      box.className = 'student-box';
+      box.id = `box-${code}`;
+
+      box.innerHTML = `
+        <div class="box-header">
+          <div class="menu-wrapper">
+            <button class="menu-button" onclick="toggleMenu('${code}')">⋮</button>
+            <div class="dropdown-menu" id="menu-${code}">
+              <button onclick="highlightStudent('${code}')">🔖 Đánh dấu</button>
+              <button onclick="kickStudent('${code}')">👢 Kick</button>
+              <button onclick="blockStudent('${code}')">⛔ Chặn</button>
+            </div>
+          </div>
+        </div>
+        <strong>${code}</strong><br>
+        Mã SV: ${code}<br>
+        <div class="video-preview">
+          <video id="remoteVideo-camera-${code}" autoplay playsinline muted width="150" height="100"></video>
+          <video id="remoteVideo-screen-${code}" autoplay playsinline muted width="150" height="100"></video>
+        </div>
+       <div class="status">🟢 Vừa vào phòng</div>
+      ${data.status === 'submitted' ? `<div class="score">🎯 Điểm: ${data.score}</div>` : ''}
+    `;
+      
+
+      container.appendChild(box);
+    }
+  });
+
+  // Gọi ngay khi tải xong
+  fetchAndUpdateStudentList();
+
+  // Lặp lại mỗi 5 giây
+  setInterval(fetchAndUpdateStudentList, 5000);
+});
+
+function fetchAndUpdateStudentList() {
+  fetch(`/api/students-in-room/${roomCode}`)
+    .then(res => res.json())
+    .then(data => {
+      //console.log("✅ [Danh sách cập nhật]", data.students);
+      loadStudentList(data.students);
+    })
+    .catch(err => {
+      console.error("❌ Lỗi khi fetch danh sách sinh viên:", err);
+    });
+}
+
+  document.getElementById("openFullscreenBtn").addEventListener("click", () => {
+
+    if (students.length === 0) {
+    alert("Danh sách sinh viên chưa sẵn sàng.");
+    return;
+  }
+  document.getElementById("fullscreenMonitor").classList.remove("hidden");
+    setTimeout(() => {
+    showStudentAt(currentIndex);
+  }, 300); // để WebRTC gán xong srcObject trước khi gọi
+  });
+
+  document.getElementById("closeFullscreenBtn").addEventListener("click", () => {
+    document.getElementById("fullscreenMonitor").classList.add("hidden");
+  });
+
+  document.getElementById("prevStudentBtn").addEventListener("click", () => {
+    currentIndex = (currentIndex - 1 + students.length) % students.length;
+    showStudentAt(currentIndex);
+  });
+
+  document.getElementById("nextStudentBtn").addEventListener("click", () => {
+    currentIndex = (currentIndex + 1) % students.length;
+    showStudentAt(currentIndex);
+  });
+
+  function loadStudentList(studentObjs) {
+  students.length = 0;
+  students.push(...studentObjs.map(s => s.code));
+
+  const list = document.getElementById("studentList");
+  list.innerHTML = "";
+
+  studentObjs.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.textContent = `${s.name} (${s.code})`;  // 👉 Hiển thị tên và mã
+    li.dataset.code = s.code;
+    li.style.cursor = "pointer";
+    li.onclick = () => {
+      currentIndex = i;
+      showStudentAt(currentIndex);
+    };
+    list.appendChild(li);
+  });
+}
+
+function showStudentAt(index) {
+  const studentCode = students[index];
+  console.log("🟡 Đang hiển thị sinh viên:", studentCode);
+
+  const cam = document.getElementById(`remoteVideo-camera-${studentCode}`);
+  console.log(cam?.srcObject);
+  const screen = document.getElementById(`remoteVideo-screen-${studentCode}`);
+
+  const camId = `remoteVideo-camera-${studentCode}`;
+  console.log("🔍 Tìm phần tử ID:", camId);
+
+  const camsm = document.getElementById(camId);
+  console.log("🟡 cam element:", camsm);
+
+  // document.getElementById(`remoteVideo-${type}-${studentCode}`);
+
+
+  if (!cam.srcObject) {
+    console.warn("❌ cam.srcObject = null");
+    alert("Camera của sinh viên chưa sẵn sàng.");
+    return;
+  }
+
+  if (!screen.srcObject) {
+    console.warn("❌ screen.srcObject = null");
+    alert("Chia sẻ màn hình của sinh viên chưa sẵn sàng.");
+    return;
+  }
+
+  document.getElementById("fullscreen-camera").srcObject = cam.srcObject;
+  document.getElementById("fullscreen-screen").srcObject = screen.srcObject;
+
+  highlightStudent(studentCode);
+}
+
+
+function highlightStudent(code) {
+  document.querySelectorAll("#studentList li").forEach(li => {
+    li.classList.toggle("selected", li.dataset.code === code);
+  });
+}
+
+// Gọi sau khi DOM đã load
+console.log("🚀 Đang gọi API lấy danh sách sinh viên...");
+
+</script>
+<script>
+  const sidebar = document.getElementById("approvalSidebar");
+  const openBtn = document.getElementById("openSidebarBtn");
+  const closeBtn = document.getElementById("closeSidebarBtn");
+  const container = document.querySelector(".container");
+
+  openBtn.addEventListener("click", () => {
+    sidebar.style.display = "block";
+    openBtn.style.display = "none";
+    container.classList.add("sidebar-open");
+  });
+
+  closeBtn.addEventListener("click", () => {
+    sidebar.style.display = "none";
+    openBtn.style.display = "block";
+    container.classList.remove("sidebar-open");
+  });
+</script>
+
+
+
+
+
+<!-- kêt thúc javascipt mới thêm vào-->
+
+      <!-- Popup Overlay -->
+<div id="score-popup" class="popup-overlay" style="display: none;">
+  <div class="popup-content">
+    <h2>📊 Thống kê kết quả phòng thi</h2>
+
+    <div class="score-groups">
+      <div class="score-group" id="excellent-group">
+        <h3>🎯 Điểm Giỏi (9 - 10)</h3>
+        <ul id="excellent-list"></ul>
+      </div>
+
+      <div class="score-group" id="good-group">
+        <h3>👍 Điểm Khá (8 - dưới 9)</h3>
+        <ul id="good-list"></ul>
+      </div>
+
+      <div class="score-group" id="poor-group">
+        <h3>⚠️ Dưới trung bình (&lt; 5)</h3>
+        <ul id="poor-list"></ul>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="score-chart"></canvas>
+    </div>
+
+    <button onclick="closePopup()">Đóng</button>
+  </div>
+</div>
+
+    
+</body>
+</html>

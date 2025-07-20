@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Chờ giảng viên duyệt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .waiting-box {
+      background-color: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .waiting-box h2 {
+      margin-bottom: 15px;
+      color: #1f2937;
+    }
+
+    .waiting-box p {
+      font-size: 16px;
+      color: #4b5563;
+    }
+
+    .spinner {
+      margin-top: 20px;
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="waiting-box">
+    <h2>Đang chờ giảng viên duyệt...</h2>
+    <p>Vui lòng đợi trong giây lát. Bạn đã bị tạm thời loại khỏi phòng và đang yêu cầu được vào lại.</p>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Socket.io -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    const studentCode = "{{ student_code }}";   // render từ Flask
+    const roomCode = "{{ room_code }}";         // render từ Flask
+
+    const socket = io('/webrtc', { path: '/socket.io' });
+
+    socket.on('connect', () => {
+      console.log("🔗 Đã kết nối socket để chờ duyệt");
+      socket.emit('join_room', { room: studentCode }); // studentCode là room socket riêng
+    });
+
+    socket.on('student_approved', function (data) {
+    const { room_code, exam_code, student_exam_id, exam_type } = data;
+
+    if (exam_type === 'thpt2025') {
+      window.location.href = `/thpt2025/exam/${student_exam_id}`;
+    } else {
+      window.location.href = `/take-exam/${room_code}`;
+    }
+  });
+
+    socket.on('student_rejected', (data) => {
+      console.log("❌ Bị từ chối vào lại phòng thi");
+      alert("Bạn đã bị từ chối vào phòng thi.");
+      window.location.href = '/exam-register';  // hoặc /register
+    });
+
+  </script>
+</body>
+</html>

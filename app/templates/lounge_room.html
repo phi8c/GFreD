@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Phòng Chờ Thi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background-color: #f3f3f3;
+      text-align: center;
+    }
+
+    .waiting-box {
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 500px;
+      margin: 0 auto;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+
+    .countdown {
+      font-size: 24px;
+      margin-top: 20px;
+      color: #007BFF;
+    }
+
+    .info {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+
+    .highlight {
+      font-weight: bold;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="waiting-box">
+    <h2>🕒 Phòng Chờ Thi</h2>
+
+    <div class="info">
+      <p><span class="highlight">Họ tên:</span> {{ student_name }}</p>
+      <p><span class="highlight">Mã sinh viên:</span> {{ student_id }}</p>
+      <p><span class="highlight">Email:</span> {{ email }}</p>
+      <p><span class="highlight">Mã phòng:</span> {{ room_code }}</p>
+    </div>
+
+    <div class="countdown" id="countdown">
+      ⏳ Đang chờ đến giờ thi...
+    </div>
+  </div>
+
+  <script>
+    const openTime = new Date("{{ open_time }}");  // Flask truyền vào
+    const studentName = "{{ student_name }}";
+    const studentId = "{{ student_id }}";
+    const email = "{{ email }}";
+    const roomCode = "{{ room_code }}";
+
+    let hasRedirected = false;
+
+    function checkAndRedirect() {
+
+      if (hasRedirected) return; 
+      const now = new Date();
+      const remaining = openTime - now;
+
+      if (remaining <= 0) {
+
+        hasRedirected = true;  // ✅ Đánh dấu đã chuyển trang
+        clearInterval(countdownInterval);
+        // ✅ Đến giờ thi → chuyển sang trang làm bài
+        const params = new URLSearchParams({
+          student_name: studentName,
+          student_id: studentId,
+          email: email,
+          room_code: roomCode
+        });
+        window.location.href = "/enter-exam?" + params.toString();
+      } else {
+        // ⏳ Cập nhật đồng hồ đếm ngược
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        document.getElementById("countdown").textContent =
+          `⏳ Còn lại: ${mins} phút ${secs < 10 ? '0' : ''}${secs} giây để bắt đầu`;
+      }
+    }
+
+    const countdownInterval = setInterval(checkAndRedirect, 1000);
+  </script>
+</body>
+</html>

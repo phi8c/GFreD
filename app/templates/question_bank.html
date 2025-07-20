@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ngân hàng câu hỏi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='question_bank.css') }}">
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Môn học</h2>
+      <ul>
+        {% for subject in subjects %}
+          <li class="{{ 'active' if subject == selected_subject else '' }}" onmouseover="showAddButton(this)" onmouseout="hideAddButton(this)">
+            <a href="{{ url_for('question.view_question_bank') }}?subject={{ subject }}">{{ subject }}</a>
+            <button class="add-btn" onclick="openPopup('{{ subject }}')">➕</button>
+          </li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    <main class="question-area">
+      <h2>Ngân hàng: {{ selected_subject }}</h2>
+      {% if questions %}
+        {% for q in questions %}
+          <div class="question-card">
+            <p><strong>{{ q.question_text }}</strong></p>
+            <p>A. {{ q.answer_a }}</p>
+            <p>B. {{ q.answer_b }}</p>
+            <p>C. {{ q.answer_c }}</p>
+            <p>D. {{ q.answer_d }}</p>
+            <p><em>Độ khó: {{ ['Dễ', 'Trung bình', 'Khó'][q.level or 0] }}</em></p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>Không có câu hỏi nào trong môn này.</p>
+      {% endif %}
+    </main>
+  </div>
+  <div id="createExamPopup" class="popup" style="display:none">
+  <div class="popup-content">
+    <span class="close" onclick="closePopup()">&times;</span>
+    <h3>Tạo bộ đề từ ngân hàng</h3>
+    <form id="createExamForm" method="POST" action="{{ url_for('question.generate_from_bank') }}">
+      <label for="selected_subject">Môn học:</label>
+      <input type="text" id="selected_subject" name="subject_name" readonly>
+
+      <label for="num_questions">Số lượng câu hỏi:</label>
+      <select name="num_questions" id="num_questions" required>
+        <option value="20">20 câu</option>
+        <option value="30">30 câu</option>
+        <option value="50">50 câu</option>
+        <option value="60">60 câu</option>
+      </select>
+
+      <button type="submit">Tạo bộ đề</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function openPopup(subject) {
+  document.getElementById('selected_subject').value = subject;
+  document.getElementById('createExamPopup').style.display = 'block';
+}
+
+function closePopup() {
+  document.getElementById('createExamPopup').style.display = 'none';
+}
+
+function showAddButton(li) {
+  li.querySelector(".add-btn").style.display = "inline";
+}
+
+function hideAddButton(li) {
+  li.querySelector(".add-btn").style.display = "none";
+}
+</script>
+
+
+</body>
+</html>

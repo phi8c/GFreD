@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết phòng thi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='student_list.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1 class="page-title">Chi tiết phòng thi</h1>
+
+     <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Tìm kiếm sinh viên...">
+      <label>Từ ngày: <input type="date" id="fromDate"></label>
+      <label>Đến ngày: <input type="date" id="toDate"></label>
+      <button onclick="applyFilter()">Lọc</button>
+      <button id="btn-statistics" class="btn btn-info">Xem thống kê điểm</button>
+    </div>
+
+    <!-- Nút toggle -->
+    <button id="toggle-details-btn">Ẩn thông tin phòng thi</button>
+
+    <!-- Thông tin phòng thi -->
+    <div class="room-details" id="room-details">
+      <p><strong>Mã phòng:</strong> {{ room_info.room_code }}</p>
+      <p><strong>Môn thi:</strong> {{ room_info.subject_name }}</p>
+      <p><strong>Thời lượng:</strong> {{ room_info.duration_minutes }} phút</p>
+      <p><strong>Ngày tạo:</strong> {{ room_info.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+      <p><strong>Thời gian mở:</strong> {{ room_info.open_time.strftime('%d/%m/%Y %H:%M') }}</p>
+      <p><strong>Chế độ chấm điểm:</strong> {{ 'Tự động' if room_info.grading_mode == 'auto' else 'Thủ công' }}</p>
+      <a href="{{ url_for('statistical.export_room_score_excel', room_code=room_info.room_code) }}"
+      class="btn btn-success mt-2" style="margin-top: 10px;">
+     📥 Xuất bảng điểm
+    </a>
+    <a href="{{ url_for('statistical.export_room', room_code=room_info.room_code) }}" class="export-link">
+      📁 Xuất tất cả bài làm (.zip)
+    </a>
+
+    </div>
+
+    <h2 class="student-list-title">Danh sách sinh viên</h2>
+
+    <div class="student-list">
+      {% for student in students %}
+      <div class="student-card" onclick="viewStudentExam({{ student.id }})">
+        <p class="student-name">{{ student.student_name }}</p>
+        <p class="student-code">{{ student.student_code }}</p>
+      </div>
+      {% else %}
+      <p>Không có sinh viên nào trong phòng thi này.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <!-- Pop-up thống kê -->
+<div id="statisticsModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h2>Thống kê điểm</h2>
+
+    <div id="score-groups">
+      <h4>Trên 8.5 điểm</h4>
+      <ul id="group-high"></ul>
+
+      <h4>Từ 7 đến 8.4 điểm</h4>
+      <ul id="group-good"></ul>
+
+      <h4>Từ 5 đến 6.9 điểm</h4>
+      <ul id="group-medium"></ul>
+
+      <h4>Dưới 5 điểm</h4>
+      <ul id="group-low"></ul>
+    </div>
+
+    <canvas id="scoreChart" height="200"></canvas>
+  </div>
+</div>
+
+  <script>
+    function viewStudentExam(studentId) {
+      window.location.href = `/student-exam/${studentId}`;
+    }
+
+    // Toggle chi tiết phòng thi
+    document.getElementById('toggle-details-btn').addEventListener('click', function () {
+      const detailDiv = document.getElementById('room-details');
+      if (detailDiv.style.display === 'none') {
+        detailDiv.style.display = 'block';
+        this.textContent = 'Ẩn thông tin phòng thi';
+      } else {
+        detailDiv.style.display = 'none';
+        this.textContent = 'Hiện thông tin phòng thi';
+      }
+    });
+    document.getElementById('searchInput').addEventListener('input', function () {
+      const keyword = this.value.toLowerCase();
+      const cards = document.querySelectorAll('.student-card');
+
+      cards.forEach(card => {
+        const name = card.querySelector('.student-name').textContent.toLowerCase();
+        const code = card.querySelector('.student-code').textContent.toLowerCase();
+        card.style.display = (name.includes(keyword) || code.includes(keyword)) ? 'block' : 'none';
+      });
+    });
+
+    // Hàm giả lập lọc ngày (nếu bạn muốn backend xử lý thật thì gửi request qua URL)
+    function applyFilter() {
+      alert("Lọc theo ngày chưa được triển khai, cần kết nối backend.");
+    }
+  </script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('btn-statistics').addEventListener('click', function () {
+     const roomCode = "{{ room_info.room_code }}"; // Thay bằng biến động
+    fetch(`/api/statistics/${roomCode}`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert("Không lấy được dữ liệu");
+                return;
+            }
+
+            const groups = data.groups;
+            const dist = data.score_distribution;
+
+            // Hiển thị danh sách
+            updateList('group-high', groups.high);
+            updateList('group-good', groups.good);
+            updateList('group-low', groups.low);
+
+            // Tính group medium: loại bỏ high + good + low
+            const all = [...groups.high, ...groups.good, ...groups.low];
+            const groupMedium = data.all_students?.filter(name => !all.includes(name)) || [];
+
+            updateList('group-medium', groupMedium);
+
+            // Hiển thị biểu đồ
+            showChart(dist);
+
+            // Hiện modal
+            document.getElementById('statisticsModal').style.display = 'flex';
+        });
+});
+
+function updateList(id, data) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    data.forEach(name => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        el.appendChild(li);
+    });
+}
+
+function showChart(distribution) {
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+
+    // Hủy biểu đồ cũ nếu đã tồn tại và hợp lệ
+    if (window.scoreChart && typeof window.scoreChart.destroy === 'function') {
+        window.scoreChart.destroy();
+    }
+
+    // Tạo biểu đồ mới
+    window.scoreChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Array.from({ length: 11 }, (_, i) => i),
+            datasets: [{
+                label: 'Số sinh viên',
+                data: distribution,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+// Đóng modal
+document.querySelector('.close-btn').addEventListener('click', () => {
+    document.getElementById('statisticsModal').style.display = 'none';
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App Sinh Câu Hỏi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Sinh Câu Hỏi Từ Bài Giảng</h1>
+        <form method="post" enctype="multipart/form-data">
+            <label for="file">Chọn file bài giảng (PDF/DOCX):</label>
+            <input type="file" name="file" required>
+            <button type="submit">Tải lên và Tạo câu hỏi</button>
+        </form>
+
+        {% if questions %}
+        <h2>Các câu hỏi được tạo:</h2>
+        <ul>
+            {% for question in questions %}
+            <li>{{ question }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</body>
+</html>
