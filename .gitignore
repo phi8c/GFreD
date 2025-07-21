@@ -22,6 +22,9 @@ __pycache__/
 .vscode/
 .idea/
 
+app/electron-app/node_modules/
+
+
 # 👉 Bỏ thư mục build tạm (nếu có export PDF, DOCX,...)
 exports/
 temp/
