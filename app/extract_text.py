@@ -28,6 +28,117 @@ def extract_text(file_path):
     return text
 import re
 
+
+def is_toc_line(line):
+    # Nhận diện dòng mục lục:
+    # - chứa nhiều dấu chấm liên tiếp
+    # - kết thúc bằng số
+    return (
+        re.search(r'\.{5,}', line) and
+        re.search(r'\d+\s*$', line)
+    )
+
+def extract_text_advance(file_path):
+    text = ""
+    if file_path.endswith(".pdf"):
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                # Bỏ nguyên trang nếu có tiêu đề "mục lục"
+                if re.search(r'\bmục lục\b', page_text, flags=re.IGNORECASE):
+                    continue
+
+                # Lọc từng dòng
+                filtered_lines = []
+                for line in page_text.splitlines():
+                    if is_toc_line(line.strip().lower()):
+                        continue
+                    filtered_lines.append(line)
+                
+                text += "\n".join(filtered_lines) + "\n"
+
+    elif file_path.endswith(".docx"):
+        doc = Document(file_path)
+        for para in doc.paragraphs:
+            line = para.text.strip()
+            if re.search(r'\bmục lục\b', line, flags=re.IGNORECASE):
+                continue
+            if is_toc_line(line.lower()):
+                continue
+            text += line + "\n"
+
+    else:
+        return "Định dạng file không được hỗ trợ!"
+
+    return text
+def split_text_by_chapters_scd(text):
+    # Tách theo chương: "Chương 1", "chương II:", "CHƯƠNG IV."...
+    # Phải nằm ở đầu dòng (sát trái), có thể kèm dấu : hoặc . và chữ hoa/thường
+    #pattern = r'(?i)(?=^chương\s+(?:\d+|[ivxlcdm]+)[\.:]?[^\n]*)'
+    pattern = r'(?i)(?=^ch[ưuƢ][ơo]ng\s+(?:\d+|[ivxlcdm]+)[\.:]?.*$)'
+
+    # Tách văn bản
+    raw_chapters = re.split(pattern, text, flags=re.MULTILINE)
+
+    chapters = {}
+    for part in raw_chapters:
+        part = part.strip()
+        if not part:
+            continue
+
+        # Tìm dòng đầu tiên có từ "chương"
+        lines = part.splitlines()
+        #header_line = next((l for l in lines if re.match(r'(?i)^chương\s+(?:\d+|[ivxlcdm]+)', l.strip())), None)
+        header_line = next((l for l in lines if re.match(r'(?i)^ch[ưuƢ][ơo]ng\s+(?:\d+|[ivxlcdm]+)', l.strip())), None)
+        if not header_line:
+            continue  # không hợp lệ
+
+        # Tìm số chương (Ả Rập hoặc La Mã)
+        #match = re.search(r'(?i)^chương\s+(?P<num>\d+|[ivxlcdm]+)', header_line.strip())
+        match = re.search(r'(?i)^ch[ưuƢ][ơo]ng\s+(?P<num>\d+|[ivxlcdm]+)', header_line.strip())
+        if not match:
+            continue
+        
+        num_raw = match.group("num")
+        try:
+            # Ưu tiên chuyển La Mã → số nếu cần
+            chapter_number = roman_to_int(num_raw) if is_roman(num_raw) else int(num_raw)
+        except:
+            continue
+        
+        # Nội dung là toàn bộ phần sau tiêu đề
+        content_lines = lines[1:]  # bỏ dòng đầu là "chương ..."
+        chapter_content = "\n".join(content_lines).strip()
+        chapters[chapter_number] = chapter_content
+
+    return chapters  # Dict[int, str]
+
+# ====== Các hàm hỗ trợ ======
+
+def is_roman(s):
+    return re.fullmatch(r'[ivxlcdm]+', s.lower()) is not None
+
+def roman_to_int(roman):
+    roman = roman.upper()
+    roman_numerals = {
+        'I': 1, 'V': 5, 'X': 10,
+        'L': 50, 'C': 100,
+        'D': 500, 'M': 1000
+    }
+    total = 0
+    prev = 0
+    for char in reversed(roman):
+        val = roman_numerals[char]
+        if val < prev:
+            total -= val
+        else:
+            total += val
+            prev = val
+    return total
+
 def split_text_by_chapters(text):
     # Tách chương bằng regex: "Chương 1", "Chương 2", ...
     parts = re.split(r'(CHƯƠNG\s+\d+)', text)
@@ -121,6 +232,49 @@ def extract_chapters_from_file(file_path):
     return cleaned_chapters
 
 # kết thúc trích xuất số chương từ file trong giao diện chính
+#### HÀM TRÍCH XUẤT CHƯƠNG MỚI THÊM VÀO
+
+def merge_duplicate_chapters(chapters):
+    seen_numbers = {}
+    result = []
+    for ch in chapters:
+        match = re.search(r'chương\s+(\d+)', ch, re.IGNORECASE)
+        if match:
+            num = int(match.group(1))
+            # Nếu chưa có chương này thì thêm
+            if num not in seen_numbers:
+                seen_numbers[num] = ch
+                result.append(ch)
+    return result
+
+def extract_chapters_from_file_advace(file_path):
+    """
+    Đọc file (PDF, DOCX) và trích xuất tiêu đề các chương.
+    Giữ nguyên đầu vào/đầu ra như bản gốc:
+        - input: file_path (str)
+        - output: list[str] (các tiêu đề chương, không trùng, giữ thứ tự)
+    """
+
+    # 1. Lấy toàn bộ text đã lọc mục lục
+    text = extract_text_advance(file_path)
+
+    # 2. Regex nhận diện tiêu đề chương (hỗ trợ cả số La Mã và Ả Rập, case-insensitive)
+    chapter_pattern = re.compile(
+        r'(?im)^\s*(?:Chương|CHƯƠNG|chương)\s+(?:\d+|[ivxlcdm]+)[\.:：]?[^\n]*'
+    )
+
+    # 3. Tìm tất cả dòng tiêu đề chương
+    chapter_lines = chapter_pattern.findall(text)
+
+    # 4. Loại trùng, strip khoảng trắng
+    cleaned_chapters = list(dict.fromkeys(line.strip() for line in chapter_lines))
+
+    return cleaned_chapters
+
+
+
+
+##### KẾT THÚC HÀM TRÍCH XUẤT CHƯƠNG MÓI THÊM VÀO
 
 # đây là bắt đầu đoạn mã trích xuất hình ảnh từ file
 

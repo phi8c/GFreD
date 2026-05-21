@@ -131,7 +131,7 @@
               <option value="40">40 câu</option>
               <option value="50" selected>50 câu</option>
             </select>
-             </div>
+            </div>
 
             <!-- Chọn chế độ 
             <label>Chọn chế độ sinh câu hỏi:</label>
@@ -774,6 +774,11 @@
         const generateBtn = document.getElementById("generateBtn");
         const basicWrapper = document.getElementById("basicQuestionWrapper");
         const chapterContainer = document.getElementById("chapterCheckboxesContainer");
+
+      if (!fileInput || !modeSelect || !totalQuestionsInput || !advTotalQuestions || !generateBtn || !basicWrapper || !chapterContainer) {
+      console.warn("Một hoặc nhiều phần tử không tồn tại trong DOM.");
+      return;
+      }
 
         function updateFormState() {
       const fileSelected = fileInput.files.length > 0;

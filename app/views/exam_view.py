@@ -31,6 +31,10 @@ def generate_exams():
         exam_set_id = request.form.get('exam_set_id')
         num_versions = int(request.form.get('num_versions', 4))  # default 4 nếu không truyền
         print("nhận được số lượng mã đề cần tạo", num_versions)
+        
+        
+        
+        
 
         if not user_id or not exam_set_id:
             return jsonify({"status": "error", "message": "Thiếu user_id hoặc exam_set_id!"})
@@ -45,13 +49,16 @@ def generate_exams():
 
         if exam_type == "basic":
             shuffle_exam_versions(user_id, exam_set_id, num_versions)
+            #return redirect(url_for('question.view_exam_set', exam_set_id=exam_set_id))
         else:  # advanced
             shuffle_advanced_exam_versions(user_id, exam_set_id, num_versions)
-            return redirect(url_for('question.view_exam_set', exam_set_id=exam_set_id))
+            #return redirect(url_for('question.view_exam_set', exam_set_id=exam_set_id))
+        return jsonify({"status": "success", "redirect_url": url_for('question.view_exam_set', exam_set_id=exam_set_id)})
+
 
         #return jsonify({"status": "success", "message": f"Tạo {num_versions} mã đề thành công."})
            
     
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
+    

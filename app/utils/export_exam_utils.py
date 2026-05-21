@@ -13,6 +13,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from flask import send_file, request, current_app
 import io, requests
+from docx.oxml import OxmlElement
 
 from controllers.db import get_db_connection
 
@@ -270,7 +271,12 @@ def export_exam_package(exam_set_id):
 
         if exam_codes:
             for code in exam_codes:
-                questions = get_exam_mcq_questions_by_code(code)
+                print("in ra code", code)
+                
+                exam_code_id = get_exam_code_id_by_code(code) 
+                
+                questions = get_exam_mcq_questions_by_code(exam_code_id)
+                print("in ra question khi lấy câu hỏi trắc nghiệm", questions)
                 export_exam_to_docx(code, questions, folder_path)
 
                 answers = []
@@ -295,7 +301,22 @@ def export_exam_package(exam_set_id):
             export_original_questions_to_docx(questions, folder_path)
 
     # Nén thư mục
-    zip_path = f"{folder_path}.zip"
+    # zip_path = f"{folder_path}.zip"
+    # with zipfile.ZipFile(zip_path, 'w') as zipf:
+    #     for root, _, files in os.walk(folder_path):
+    #         for file in files:
+    #             file_path = os.path.join(root, file)
+    #             arcname = os.path.relpath(file_path, folder_path)
+    #             zipf.write(file_path, arcname)
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Tạo thư mục exported_exams ngang hàng với app/
+    export_folder = os.path.join(base_dir, "exported_exams")
+    os.makedirs(export_folder, exist_ok=True)
+
+# Đặt đường dẫn file zip trong exported_exams
+    zip_path = os.path.join(export_folder, f"set_{exam_set_id}.zip")
+
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         for root, _, files in os.walk(folder_path):
             for file in files:
@@ -980,7 +1001,21 @@ def render_exam_to_pdf(data):
 
 ### mới thêm vào đẻ xuất cả câu hỏi lẫn đáp án
 
+def set_table_borders(table):
+    tbl = table._tbl
+    tblPr = tbl.get_or_add_tblPr()
 
+    tblBorders = OxmlElement('w:tblBorders')
+
+    for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'single')      # Đường viền đơn
+        border.set(qn('w:sz'), '4')            # Độ dày (4/8 pt)
+        border.set(qn('w:space'), '0')
+        border.set(qn('w:color'), '000000')    # Màu đen
+        tblBorders.append(border)
+
+    tblPr.append(tblBorders)
 
 def render_exam_with_answers_to_docx(data):
     doc = Document()
@@ -1077,6 +1112,75 @@ def render_exam_with_answers_to_docx(data):
     return doc
 
 ### HÀM NÀY LÀ ĐỂ XUẤT PDF ĐÁP ÁN CÂU HỎI GỐC
+def render_exam_to_docx_scd(data):
+    doc = Document()
+
+    # ==== FONT & STYLE ====
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(13)
+    style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+
+    # ==== HEADER ====
+    doc.add_paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG").runs[0].bold = True
+    doc.add_paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]").runs[0].italic = True
+    doc.add_paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("Học kỳ: ……  Năm học: ……… - ………")
+    doc.add_paragraph(f"\nĐỀ THI - MÃ ĐỀ {data['exam_code']}")
+    doc.add_paragraph("Tên học phần: ..................................................        Mã học phần: ...........................")
+    doc.add_paragraph("Thời gian làm bài: ……… phút (không kể thời gian phát đề)")
+    doc.add_paragraph("Hình thức thi: Trắc nghiệm khách quan")
+    doc.add_paragraph("Ghi chú:\n    - Thí sinh được/không được sử dụng tài liệu.\n    - Thí sinh nộp lại đề thi.")
+    doc.add_paragraph("\nNỘI DUNG ĐỀ THI").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    # ==== GHÉP VÀ SẮP XẾP CÂU HỎI ====
+    questions = []
+    for q in data.get('mcq_questions', []):
+        q['type'] = 'MCQ'
+        questions.append(q)
+    for q in data.get('tf_questions', []):
+        q['type'] = 'TF'
+        questions.append(q)
+    for q in data.get('sa_questions', []):
+        q['type'] = 'SA'
+        questions.append(q)
+
+    questions.sort(key=lambda q: q.get('position', 0))
+    data['questions'] = questions
+
+    # ==== HIỂN THỊ CÂU HỎI ====
+    for idx, q in enumerate(questions, start=1):
+        doc.add_paragraph(f"Câu {idx}: {q['question_text']}")
+
+        if q['type'] == 'MCQ':
+            doc.add_paragraph(f"A. {q['answer_a']}")
+            doc.add_paragraph(f"B. {q['answer_b']}")
+            doc.add_paragraph(f"C. {q['answer_c']}")
+            doc.add_paragraph(f"D. {q['answer_d']}")
+
+        elif q['type'] == 'TF':
+            image_url = q.get('image_url')
+            if image_url:
+                try:
+                    relative_path = image_url.lstrip("/")
+                    if relative_path.startswith("uploads/"):
+                        relative_path = relative_path.replace("uploads/", "")
+                    image_path = os.path.join(UPLOAD_FOLDER, relative_path)
+                    doc.add_picture(image_path, width=Inches(4.5))
+                except Exception as e:
+                    doc.add_paragraph(f"(Không thể tải ảnh: {str(e)})")
+            doc.add_paragraph("Các phát biểu:")
+            for i, st in enumerate(q['statements'], start=1):
+                doc.add_paragraph(f"  ({i}) {st['label']}: {st['content']}")
+
+        elif q['type'] == 'SA':
+            doc.add_paragraph("(Câu hỏi tự luận. Học sinh trả lời ngắn vào chỗ trống.)")
+
+        doc.add_paragraph("")  # Dòng trống giữa các câu hỏi
+
+    doc.add_paragraph("HẾT")
+    return doc
 
 
 def export_exam_with_answers_to_pdf(data):
@@ -1087,12 +1191,16 @@ def export_exam_with_answers_to_pdf(data):
     # ===== HEADER =====
     flow.append(Paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG", styles['RobotoTitle']))
     flow.append(Paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]", styles['RobotoNormal']))
-    flow.append(Paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN", styles['RobotoTitle']))
+    flow.append(Paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN", styles['RobotoTitle']))
+    flow.append(Spacer(1, 6))
+    flow.append(Paragraph("Học kỳ: ……  Năm học: ……… - ………", styles['RobotoNormal']))
+    flow.append(Paragraph("Tên học phần: ...................................................  "
+                      "Mã học phần: ...................  Số TC: ........", styles['RobotoNormal']))
+    flow.append(Paragraph("Ngành: .................................................  "
+                      "Hệ đào tạo: ............  Hình thức đào tạo: ...............", styles['RobotoNormal']))
     flow.append(Spacer(1, 12))
-    flow.append(Paragraph(f"ĐỀ THI - MÃ ĐỀ {data.get('exam_code', '')}", styles['RobotoHeading2']))
-    flow.append(Spacer(1, 12))
-    flow.append(Paragraph("NỘI DUNG ĐỀ THI", styles['RobotoHeading2']))
-    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoHeading2']))
+    flow.append(Spacer(1, 18))
     
     
     questions = []
@@ -1186,6 +1294,82 @@ def export_exam_with_answers_to_pdf(data):
     return buffer
 
 ### đây là xuất docx câu hỏi và đáp án
+
+
+def export_exam_to_pdf_scd(data):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    flow = []
+
+    # ===== HEADER =====
+    flow.append(Paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG", styles['RobotoTitle']))
+    flow.append(Paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]", styles['RobotoNormal']))
+    flow.append(Paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN", styles['RobotoTitle']))
+    flow.append(Spacer(1, 6))
+    flow.append(Paragraph("Học kỳ: ……  Năm học: ……… - ………", styles['RobotoNormal']))
+    flow.append(Paragraph("Tên học phần: ...................................................  "
+                          "Mã học phần: ...................  Số TC: ........", styles['RobotoNormal']))
+    flow.append(Paragraph("Ngành: .................................................  "
+                          "Hệ đào tạo: ............  Hình thức đào tạo: ...............", styles['RobotoNormal']))
+    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoHeading2']))
+    flow.append(Spacer(1, 18))
+
+    # ===== GHÉP & SẮP XẾP CÂU HỎI =====
+    questions = []
+    for q in data.get('mcq_questions', []):
+        q['type'] = 'MCQ'
+        questions.append(q)
+    for q in data.get('tf_questions', []):
+        q['type'] = 'TF'
+        questions.append(q)
+    for q in data.get('sa_questions', []):
+        q['type'] = 'SA'
+        questions.append(q)
+    questions.sort(key=lambda q: q.get('position', 0))
+    data['questions'] = questions
+
+    # ===== HIỂN THỊ CÂU HỎI =====
+    for idx, q in enumerate(questions, start=1):
+        flow.append(Paragraph(f"Câu {idx}: {q.get('question_text', '')}", styles['RobotoNormal']))
+
+        if q['type'] == 'MCQ':
+            flow.append(Paragraph(f"A. {q.get('answer_a', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"B. {q.get('answer_b', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"C. {q.get('answer_c', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"D. {q.get('answer_d', '')}", styles['RobotoNormal']))
+
+        elif q['type'] == 'TF':
+            image_url = q.get('image_url')
+            if image_url:
+                try:
+                    relative_path = image_url.lstrip("/")
+                    if relative_path.startswith("uploads/"):
+                        relative_path = relative_path.replace("uploads/", "")
+                    image_path = os.path.join(UPLOAD_FOLDER, relative_path)
+
+                    image = Image(image_path, width=300)
+                    flow.append(image)
+                    flow.append(Spacer(1, 6))
+                except Exception as e:
+                    flow.append(Paragraph(f"(Không thể tải ảnh: {str(e)})", styles['RobotoNormal']))
+
+            flow.append(Paragraph("Các phát biểu:", styles['RobotoNormal']))
+            for i, st in enumerate(q.get('statements', []), start=1):
+                label = st.get("label", "?")
+                content = st.get("content", "")
+                flow.append(Paragraph(f"({i}) {label}: {content}", styles['RobotoNormal']))
+
+        elif q['type'] == 'SA':
+            flow.append(Paragraph("(Câu hỏi tự luận. Học sinh trả lời ngắn vào chỗ trống.)", styles['RobotoNormal']))
+
+        flow.append(Spacer(1, 12))
+
+    # ===== KẾT =====
+    flow.append(Paragraph("HẾT", styles['RobotoTitle']))
+    doc.build(flow)
+    buffer.seek(0)
+    return buffer
 
 
 
@@ -1392,6 +1576,19 @@ def export_original_exam_to_docx(exam_type, data):
     font.name = 'Times New Roman'
     font.size = Pt(13)
     style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+    
+    doc.add_paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")  # Spacer
+
+    doc.add_paragraph("Học kỳ: ……  Năm học: ……… - ………")
+    doc.add_paragraph("Tên học phần: ...................................................  "
+                  "Mã học phần: ...................  Số TC: ........")
+    doc.add_paragraph("Ngành: .................................................  "
+                  "Hệ đào tạo: ............  Hình thức đào tạo: ...............")
+    doc.add_paragraph("")  # Spacer
+
 
     doc.add_paragraph("ĐỀ THI GỐC").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     doc.add_paragraph("")
@@ -1450,6 +1647,7 @@ def export_original_exam_to_docx(exam_type, data):
     table = doc.add_table(rows=1, cols=2)
     table.rows[0].cells[0].text = "Câu"
     table.rows[0].cells[1].text = "Đáp án đúng"
+    set_table_borders(table)  # ← Thêm dòng này để gắn border
 
     idx = 1
 
@@ -1484,7 +1682,77 @@ def export_original_exam_to_docx(exam_type, data):
 
 #### hàm này xuất dạng pdf
 
+def export_original_exam_to_docx_no_answers(exam_type, data):
+    doc = Document()
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(13)
+    style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
 
+    doc.add_paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")
+
+    doc.add_paragraph("Học kỳ: ……  Năm học: ……… - ………")
+    doc.add_paragraph("Tên học phần: ...................................................  "
+                      "Mã học phần: ...................  Số TC: ........")
+    doc.add_paragraph("Ngành: .................................................  "
+                      "Hệ đào tạo: ............  Hình thức đào tạo: ...............")
+    doc.add_paragraph("")
+
+    doc.add_paragraph("ĐỀ THI GỐC").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")
+
+    idx = 1
+
+    if exam_type == 'mcq':
+        for q in data:
+            doc.add_paragraph(f"Câu {idx}: {q['question_text']}")
+            doc.add_paragraph(f"A. {q.get('answer_a', '')}")
+            doc.add_paragraph(f"B. {q.get('answer_b', '')}")
+            doc.add_paragraph(f"C. {q.get('answer_c', '')}")
+            doc.add_paragraph(f"D. {q.get('answer_d', '')}")
+            idx += 1
+            doc.add_paragraph("")
+
+    elif exam_type == 'thpt_2025':
+        # MCQ
+        for q in data.get('MCQ', []):
+            doc.add_paragraph(f"Câu {idx}: {q['question_text']}")
+            doc.add_paragraph(f"A. {q['answer_a']}")
+            doc.add_paragraph(f"B. {q['answer_b']}")
+            doc.add_paragraph(f"C. {q['answer_c']}")
+            doc.add_paragraph(f"D. {q['answer_d']}")
+            idx += 1
+            doc.add_paragraph("")
+
+        # TF
+        for q in data.get('tf', []):
+            doc.add_paragraph(f"Câu {idx} (Đúng/Sai): {q['question_text']}")
+            if 'image_url' in q and q['image_url']:
+                try:
+                    relative_path = q['image_url'].lstrip("/").replace("uploads/", "")
+                    image_path = os.path.join(UPLOAD_FOLDER, relative_path)
+                    doc.add_picture(image_path, width=Pt(200))
+                except Exception as e:
+                    doc.add_paragraph("[Không thể hiển thị ảnh]")
+                    print("❌ Lỗi hiển thị ảnh:", e)
+
+            for i, st in enumerate(q['sub_items'], start=1):
+                doc.add_paragraph(f"({i}) {st['statement_text']}")
+            idx += 1
+            doc.add_paragraph("")
+
+        # SA
+        for q in data.get('SA', []):
+            doc.add_paragraph(f"Câu {idx} (Tự luận): {q['question_text']}")
+            idx += 1
+            doc.add_paragraph("")
+
+    doc.add_paragraph("HẾT").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    return doc
 
 def export_original_exam_to_pdf(exam_type, data):
     buf = BytesIO()
@@ -1577,26 +1845,16 @@ def export_original_exam_to_pdf_advance(exam_type, data):
     width, height = A4
     y = height - 50
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, y, "TRƯỜNG ĐẠI HỌC KIÊN GIANG")
-    y -= 15
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(width / 2, y, "[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]")
-    y -= 25
-    c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(width / 2, y, "ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN")
-    y -= 25
-
-    c.setFont("Helvetica", 10)
-    c.drawString(50, y, "Học kỳ: …… Năm học: ……… - ………")
-    y -= 15
-    c.drawString(50, y, "Tên học phần: ...................................................  Mã học phần: ...................  Số TC: ........")
-    y -= 15
-    c.drawString(50, y, "Ngành: .................................................  Hệ đào tạo: ............  Hình thức đào tạo: ...............")
-    y -= 30
-    c.drawCentredString(width / 2, y, "ĐỀ THI GỐC")
-    y -= 30
-
+    flow.append(Paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG", styles['RobotoTitle']))
+    flow.append(Paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]", styles['RobotoNormal']))
+    flow.append(Paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN", styles['RobotoTitle']))
+    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("Học kỳ: …… Năm học: ……… - ………", styles['RobotoNormal']))
+    flow.append(Paragraph("Tên học phần: ...................................................  Mã học phần: ...................  Số TC: ........", styles['RobotoNormal']))
+    flow.append(Paragraph("Ngành: .................................................  Hệ đào tạo: ............  Hình thức đào tạo: ...............", styles['RobotoNormal']))
+    flow.append(Spacer(1, 24))
+    flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoHeading2']))
+    flow.append(Spacer(1, 12))
     flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoTitle']))
     flow.append(Spacer(1, 12))
 
@@ -1673,6 +1931,177 @@ def export_original_exam_to_pdf_advance(exam_type, data):
     doc.build(flow)
     buf.seek(0)
     return buf
+
+def export_original_exam_to_pdf_advance_no_answers(exam_type, data):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    flow = []
+
+    # ===== HEADER =====
+    flow.append(Paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG", styles['RobotoTitle']))
+    flow.append(Paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]", styles['RobotoNormal']))
+    flow.append(Paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN", styles['RobotoTitle']))
+    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("Học kỳ: …… Năm học: ……… - ………", styles['RobotoNormal']))
+    flow.append(Paragraph("Tên học phần: ...................................................  Mã học phần: ...................  Số TC: ........", styles['RobotoNormal']))
+    flow.append(Paragraph("Ngành: .................................................  Hệ đào tạo: ............  Hình thức đào tạo: ...............", styles['RobotoNormal']))
+    flow.append(Spacer(1, 24))
+    flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoHeading2']))
+    flow.append(Spacer(1, 12))
+    flow.append(Paragraph("ĐỀ THI GỐC", styles['RobotoTitle']))
+    flow.append(Spacer(1, 12))
+
+    # ===== NỘI DUNG CÂU HỎI =====
+    idx = 1
+
+    if exam_type == 'mcq':
+        for q in data:
+            flow.append(Paragraph(f"Câu {idx}: {q['question_text']}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"A. {q.get('answer_a', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"B. {q.get('answer_b', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"C. {q.get('answer_c', '')}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"D. {q.get('answer_d', '')}", styles['RobotoNormal']))
+            flow.append(Spacer(1, 12))
+            idx += 1
+
+    else:
+        for q in data.get('MCQ', []):
+            flow.append(Paragraph(f"Câu {idx}: {q['question_text']}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"A. {q['answer_a']}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"B. {q['answer_b']}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"C. {q['answer_c']}", styles['RobotoNormal']))
+            flow.append(Paragraph(f"D. {q['answer_d']}", styles['RobotoNormal']))
+            flow.append(Spacer(1, 12))
+            idx += 1
+
+        for q in data.get('tf', []):
+            flow.append(Paragraph(f"Câu {idx} (Đúng/Sai): {q['question_text']}", styles['RobotoNormal']))
+            if 'image_url' in q and q['image_url']:
+                try:
+                    flow.append(Image(q['image_url'], width=200, height=150))
+                except Exception as e:
+                    flow.append(Paragraph(f"[Lỗi ảnh: {str(e)}]", styles['RobotoItalic']))
+            for i, st in enumerate(q['sub_items'], start=1):
+                flow.append(Paragraph(f"({i}) {st['statement_text']}", styles['RobotoNormal']))
+            flow.append(Spacer(1, 12))
+            idx += 1
+
+        for q in data.get('SA', []):
+            flow.append(Paragraph(f"Câu {idx} (Tự luận): {q['question_text']}", styles['RobotoNormal']))
+            flow.append(Spacer(1, 12))
+            idx += 1
+
+    # KHÔNG CÓ BẢNG ĐÁP ÁN Ở CUỐI
+    flow.append(Paragraph("HẾT", styles['RobotoTitle']))
+
+    doc.build(flow)
+    buf.seek(0)
+    return buf
+
+def export_question_set_to_docx(data):
+    if not data:
+        raise ValueError("Không có câu hỏi nào để xuất.")
+
+    doc = Document()
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(13)
+
+    # ===== HEADER =====
+    doc.add_paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")  # Spacer
+
+    doc.add_paragraph("Học kỳ: ……  Năm học: ……… - ………")
+    doc.add_paragraph("Tên học phần: ...................................................  "
+                  "Mã học phần: ...................  Số TC: ........")
+    doc.add_paragraph("Ngành: .................................................  "
+                  "Hệ đào tạo: ............  Hình thức đào tạo: ...............")
+    doc.add_paragraph("")  # Spacer
+
+
+    doc.add_paragraph("ĐỀ THI GỐC").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")
+
+    for idx, q in enumerate(data, start=1):
+        doc.add_paragraph(f"Câu {idx}: {q.get('question_text', '')}", style='Normal')
+        doc.add_paragraph(f"A. {q.get('answer_a', '')}")
+        doc.add_paragraph(f"B. {q.get('answer_b', '')}")
+        doc.add_paragraph(f"C. {q.get('answer_c', '')}")
+        doc.add_paragraph(f"D. {q.get('answer_d', '')}")
+
+        correct = q.get('correct_answer', '').strip().upper()
+        doc.add_paragraph(f"Đáp án đúng: {correct}", style='Normal')
+        doc.add_paragraph("------------------------")
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+def export_question_set_to_docx_scd(data):
+    if not data:
+        raise ValueError("Không có câu hỏi nào để xuất.")
+
+    doc = Document()
+
+    # ==== Định dạng font Times New Roman, cỡ 13 ====
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(13)
+
+    # ===== HEADER =====
+    doc.add_paragraph("TRƯỜNG ĐẠI HỌC KIÊN GIANG").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("[ĐƠN VỊ QUẢN LÝ HỌC PHẦN]").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("ĐỀ THI KẾT THÚC HỌC PHẦN TRẮC NGHIỆM KHÁCH QUAN").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")  # Spacer
+
+    doc.add_paragraph("Học kỳ: ……  Năm học: ……… - ………")
+    doc.add_paragraph("Tên học phần: ...................................................  "
+                      "Mã học phần: ...................  Số TC: ........")
+    doc.add_paragraph("Ngành: .................................................  "
+                      "Hệ đào tạo: ............  Hình thức đào tạo: ...............")
+    doc.add_paragraph("")
+
+    doc.add_paragraph("ĐỀ THI GỐC").alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph("")
+
+    # ===== TẠO BẢNG =====
+    table = doc.add_table(rows=1, cols=9)
+    table.style = 'Table Grid'
+
+    # Tiêu đề cột
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'STT'
+    hdr_cells[1].text = 'Tên câu hỏi'
+    hdr_cells[2].text = 'Đáp án\nA'
+    hdr_cells[3].text = 'B'
+    hdr_cells[4].text = 'C'
+    hdr_cells[5].text = 'D'
+    hdr_cells[6].text = 'Đáp án đúng'
+    hdr_cells[7].text = 'Đúng'
+    hdr_cells[8].text = 'Sai'
+
+    # Thêm từng dòng câu hỏi
+    for idx, q in enumerate(data, start=1):
+        row_cells = table.add_row().cells
+        row_cells[0].text = f"Câu {idx}"
+        row_cells[1].text = q.get('question_text', '')
+        row_cells[2].text = q.get('answer_a', '')
+        row_cells[3].text = q.get('answer_b', '')
+        row_cells[4].text = q.get('answer_c', '')
+        row_cells[5].text = q.get('answer_d', '')
+        row_cells[6].text = q.get('correct_answer', '').strip().upper()
+        row_cells[7].text = ""  # Chỗ để đánh giá "Đúng"
+        row_cells[8].text = ""  # Chỗ để đánh giá "Sai"
+
+    # ===== Xuất ra buffer =====
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
 
 
 

@@ -10,6 +10,7 @@
   <div class="container">
     <aside class="sidebar">
       <h2>Môn học</h2>
+      <button class="btn-add-question" id="openAddQuestionBtn">+ Thêm câu hỏi thủ công</button>
       <ul>
         {% for subject in subjects %}
           <li class="{{ 'active' if subject == selected_subject else '' }}" onmouseover="showAddButton(this)" onmouseout="hideAddButton(this)">
@@ -21,16 +22,20 @@
     </aside>
 
     <main class="question-area">
+      <input type="text" id="searchBox" placeholder="🔍 Tìm câu hỏi..." style="width:100%;padding:8px;margin-bottom:12px;">
       <h2>Ngân hàng: {{ selected_subject }}</h2>
       {% if questions %}
         {% for q in questions %}
-          <div class="question-card">
-            <p><strong>{{ q.question_text }}</strong></p>
+          <div  id="question-row-{{ q.id }}" class="question-card">
+            <p><strong> Câu {{ loop.index }}: {{ q.question_text }}</strong></p>
             <p>A. {{ q.answer_a }}</p>
             <p>B. {{ q.answer_b }}</p>
             <p>C. {{ q.answer_c }}</p>
             <p>D. {{ q.answer_d }}</p>
             <p><em>Độ khó: {{ ['Dễ', 'Trung bình', 'Khó'][q.level or 0] }}</em></p>
+            <button onclick="editQuestion({{ q.id }})">Sửa</button>
+            <button onclick="deleteQuestion({{ q.id }})">Xóa</button>
+
           </div>
         {% endfor %}
       {% else %}
@@ -57,6 +62,110 @@
       <button type="submit">Tạo bộ đề</button>
     </form>
   </div>
+  </div>
+  
+
+<!-- Pop-up overlay -->
+<div class="popup-overlay" id="popupOverlay">
+    <div class="popup-content">
+        <span class="popup-close" id="popupClose">&times;</span>
+        <h2>Thêm câu hỏi thủ công</h2>
+
+        <form id="addQuestionForm">
+            <!-- Môn học -->
+            <label for="subject_name">Môn học:</label>
+            <select name="subject_name" id="subject_name" required>
+                <option value="">-- Chọn môn học --</option>
+                {% for sub in subjects %}
+                    <option value="{{ sub }}">{{ sub }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Độ khó -->
+            <label for="level">Độ khó:</label>
+            <select name="level" id="level" required>
+                <option value="">-- Chọn độ khó --</option>
+                <option value="easy">Dễ</option>
+                <option value="medium">Trung bình</option>
+                <option value="hard">Khó</option>
+            </select>
+
+            <!-- Nội dung câu hỏi -->
+            <label for="question_text">Nội dung câu hỏi:</label>
+            <textarea name="question_text" id="question_text" rows="3" required></textarea>
+
+            <!-- Các đáp án -->
+            <label>Đáp án A:</label>
+            <input type="text" name="answer_a" required>
+
+            <label>Đáp án B:</label>
+            <input type="text" name="answer_b" required>
+
+            <label>Đáp án C:</label>
+            <input type="text" name="answer_c" required>
+
+            <label>Đáp án D:</label>
+            <input type="text" name="answer_d" required>
+
+            <!-- Đáp án đúng -->
+            <label for="correct_answer">Đáp án đúng:</label>
+            <select name="correct_answer" id="correct_answer" required>
+                <option value="">-- Chọn đáp án đúng --</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+            </select>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-save">Lưu</button>
+                <button type="button" class="btn-cancel" id="cancelBtn">Hủy</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div id="editPopup" class="popup-overlay" style="display:none;">
+<div class="popup-content">
+  <h3>Chỉnh sửa câu hỏi</h3>
+  <form id="editForm">
+    <input type="hidden" id="edit_id" name="id">
+
+    <label>Nội dung:</label>
+    <textarea id="edit_content" name="content"></textarea>
+
+    <label>Đáp án A:</label>
+    <input type="text" id="edit_option_a" name="option_a">
+
+    <label>Đáp án B:</label>
+    <input type="text" id="edit_option_b" name="option_b">
+
+    <label>Đáp án C:</label>
+    <input type="text" id="edit_option_c" name="option_c">
+
+    <label>Đáp án D:</label>
+    <input type="text" id="edit_option_d" name="option_d">
+
+    <label>Đáp án đúng:</label>
+    <select id="edit_correct_answer" name="correct_answer">
+      <option value="A">A</option>
+      <option value="B">B</option>
+      <option value="C">C</option>
+      <option value="D">D</option>
+    </select>
+
+    <label>Độ khó:</label>
+    <select id="edit_difficulty" name="difficulty">
+      <option value="0">Dễ</option>
+      <option value="1">Trung bình</option>
+      <option value="2">Khó</option>
+    </select>
+
+    <button type="button" onclick="saveQuestion()">Lưu</button>
+    <button type="button" onclick="closeEditPopup()">Hủy</button>
+  </form>
+</div>
+
+</div>
 </div>
 
 <script>
@@ -77,6 +186,165 @@ function hideAddButton(li) {
   li.querySelector(".add-btn").style.display = "none";
 }
 </script>
+
+<script> 
+  // Mở & đóng pop-up
+const popupOverlay = document.getElementById('popupOverlay');
+const openBtn = document.getElementById('openAddQuestionBtn');
+const closeBtn = document.getElementById('popupClose');
+const cancelBtn = document.getElementById('cancelBtn');
+
+openBtn.addEventListener('click', () => popupOverlay.style.display = 'block');
+closeBtn.addEventListener('click', () => popupOverlay.style.display = 'none');
+cancelBtn.addEventListener('click', () => popupOverlay.style.display = 'none');
+window.addEventListener('click', (e) => {
+    if (e.target === popupOverlay) popupOverlay.style.display = 'none';
+});
+
+// Xử lý submit form
+document.getElementById('addQuestionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = {};
+    form.querySelectorAll('[name]').forEach(input => {
+        formData[input.name] = input.value.trim();
+    });
+
+    // Validate JS
+    for (let key in formData) {
+        if (!formData[key]) {
+            alert('Vui lòng nhập đầy đủ thông tin!');
+            return;
+        }
+    }
+
+    fetch('/api/add-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            form.reset();
+            popupOverlay.style.display = 'none';
+            location.reload();
+        }
+    })
+    .catch(err => console.error(err));
+});
+// đoạn này mới thêm vào
+
+
+
+function editQuestion(id) {
+  fetch(`/question-bank/${id}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("edit_id").value = data.id;
+      document.getElementById("edit_content").value = data.question_text;
+      document.getElementById("edit_option_a").value = data.answer_a;
+      document.getElementById("edit_option_b").value = data.answer_b;
+      document.getElementById("edit_option_c").value = data.answer_c;
+      document.getElementById("edit_option_d").value = data.answer_d;
+      document.getElementById("edit_correct_answer").value = data.correct_answer;
+      document.getElementById("edit_difficulty").value = data.level;
+
+      document.getElementById("editPopup").style.display = "block";
+    });
+}
+
+function closeEditPopup() {
+  document.getElementById("editPopup").style.display = "none";
+}
+function saveQuestion() {
+  const formData = new FormData(document.getElementById("editForm"));
+
+  fetch("/update-question-bank", {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(result => {
+    if (result.success) {
+      alert("Cập nhật thành công!");
+      closeEditPopup();
+      reloadQuestions();
+    } else {
+      alert("Có lỗi khi cập nhật!");
+    }
+  });
+}
+
+function reloadQuestions() {
+  fetch("/question-bank-list")
+    .then(res => res.text())
+    .then(html => {
+      document.querySelector("#questionTable tbody").innerHTML = html;
+    });
+}
+
+
+
+</script>
+
+<script>
+function deleteQuestion(id) {
+    if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này không?")) return;
+
+    fetch(`/delete-question/${id}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            document.getElementById(`question-row-${id}`).remove();
+        } else {
+            alert("Lỗi khi xóa câu hỏi!");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Lỗi kết nối server!");
+    });
+}
+</script>
+<script>
+
+  // cái này là phần tìm kiếm
+document.getElementById("searchBox").addEventListener("keyup", function(e) {
+    const keyword = e.target.value.toLowerCase().trim();
+    const questions = document.querySelectorAll(".question-card");
+
+    questions.forEach(card => card.classList.remove("highlight"));
+
+    if (keyword.length === 0) return;
+
+    let found = null;
+
+    questions.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        if (text.includes(keyword) && !found) {
+            found = card;
+        }
+    });
+
+    if (found) {
+        // highlight
+        found.classList.add("highlight");
+
+        // đưa nó lên đầu
+        found.parentNode.prepend(found);
+
+        // cuộn tới vị trí
+        found.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+});
+</script>
+
+
 
 
 </body>

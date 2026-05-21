@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, make_response, flash
-from models.exam_model import get_exam_questions_by_code, save_student_submission, get_correct_answer, save_student_exam, save_student_answer, update_student_exam_score, get_exam_code_id_by_code, is_advanced_exam_set, sel_exam_code_id_by_code, get_exam_questions_by_code_id, get_student_code_by_exam_and_room
+from models.exam_model import get_exam_questions_by_code, save_student_submission, get_correct_answer, save_student_exam, save_student_answer, update_student_exam_score, get_exam_code_id_by_code, is_advanced_exam_set, sel_exam_code_id_by_code, get_exam_questions_by_code_id, get_student_code_by_exam_and_room, get_student_exam_id
 from gen_questions import get_db_connection
 from app.controllers.extensions import socketio
 from datetime import datetime, timedelta
@@ -11,8 +11,11 @@ student_bp = Blueprint('student_bp', __name__)
 def start_exam(room_code):
     student_name = request.args.get('student_name')
     student_code = request.args.get('student_code')
-    #room_code = request.args.get('room_code')
+    #room_code = request.args.get('room_code')  (không cần viết chính xác như này)
     exam_code = request.args.get('exam_code')
+    print("in ra student code", student_code)
+    print("in ra room code", room_code)
+    print("in ra exam code trong phòng thi", exam_code)
     
     result_if_submitted = check_submitted_and_redirect(student_code, room_code)
     if result_if_submitted:
@@ -26,7 +29,8 @@ def start_exam(room_code):
         'room_code': room_code
     }, namespace='/room')
 
-    student_exam_id = save_student_exam(student_name, student_code, room_code, exam_code)
+    #student_exam_id = save_student_exam(student_name, student_code, room_code, exam_code)
+    student_exam_id = get_student_exam_id(student_code, room_code)
     
      # Lấy thời lượng bài thi
     conn = get_db_connection()
@@ -40,31 +44,85 @@ def start_exam(room_code):
         return "Không tìm thấy thông tin phòng thi", 404
     duration = exam_room['duration_minutes']
     
-    #####
+    
+    
+    is_late = is_student_late(room_code, student_code)
+    
     cursor2 = conn.cursor(dictionary=True, buffered=True)
     cursor2.execute("""
-    SELECT se.start_time, er.duration_minutes
+    SELECT se.start_time, er.duration_minutes, er.open_time, er.grace_period_minutes
     FROM student_exams se
     JOIN exam_rooms er ON se.room_code = er.room_code
     WHERE se.room_code = %s AND se.student_code = %s
-    """, (room_code, student_code))
-    result = cursor2.fetchone()
-    if not result:
+""", (room_code, student_code))
+    exam_info = cursor2.fetchone()
+
+    if not exam_info:
         cursor2.close()
         conn.close()
         return "Không tìm thấy thông tin bài thi", 404
+
+    duration = exam_info['duration_minutes']
+    start_time = exam_info['start_time']
+    grace_period_minutes = exam_info['grace_period_minutes']
+    room_start_time = exam_info['open_time']
+    room_end_time = room_start_time + timedelta(minutes=duration + grace_period_minutes)
+
+# Kiểm tra sinh viên từng bị kick chưa
+    cursor2.execute("""
+    SELECT status, first_start_time
+    FROM control_students
+    WHERE room_code = %s AND student_code = %s AND status = 'kicked'
+    """, (room_code, student_code))
+    control_info = cursor2.fetchone()
+
+    if control_info:
+        first_start_time = control_info['first_start_time']
+        kicked_end_time = first_start_time + timedelta(minutes=duration)
+        end_time = min(room_end_time, kicked_end_time)
+    elif is_late:
+        room_remaining_time = room_end_time - datetime.now()
+    # Thời gian còn lại không vượt quá thời lượng bài thi
+        end_time = datetime.now() + min(room_remaining_time, timedelta(minutes=duration))
     
-    
-    start_time = result['start_time']
-    
+    # Xóa status='late' sau khi xử lý
+        clear_late_status(student_code, room_code)
+    else:
+        end_time = start_time + timedelta(minutes=duration)
+
+    start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
+    end_time_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
+
     cursor2.close()
     conn.close()
 
+    
+    ########
+    # cursor2 = conn.cursor(dictionary=True, buffered=True)
+    # cursor2.execute("""
+    # SELECT se.start_time, er.duration_minutes
+    # FROM student_exams se
+    # JOIN exam_rooms er ON se.room_code = er.room_code
+    # WHERE se.room_code = %s AND se.student_code = %s
+    # """, (room_code, student_code))
+    # result = cursor2.fetchone()
+    # if not result:
+    #     cursor2.close()
+    #     conn.close()
+    #     return "Không tìm thấy thông tin bài thi", 404
+    
+    
+    # start_time = result['start_time']
+    
+    # cursor2.close()
+    # conn.close()
+    ########
+
     # ✅ Tính toán thời điểm kết thúc
     
-    end_time = start_time + timedelta(minutes=duration)
-    end_time_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
-    start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
+    #end_time = start_time + timedelta(minutes=duration)
+    #end_time_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
+    #start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%S')
     # end_time = datetime.now() + timedelta(minutes=duration)
     # end_time_str = end_time.strftime('%Y-%m-%dT%H:%M:%S')
 
@@ -189,6 +247,19 @@ def submit_exam(room_code):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+def clear_late_status(student_code, room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        DELETE FROM control_students
+        WHERE student_code = %s AND room_code = %s AND status = 'late'
+    """, (student_code, room_code))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 def grade_advanced_exam(form_data, exam_code_id, room_code):
     correct_counts = {'difficulty_easy': 0, 'difficulty_medium': 0, 'difficulty_hard': 0}
     total_counts = {'difficulty_easy': 0, 'difficulty_medium': 0, 'difficulty_hard': 0}
@@ -326,5 +397,20 @@ def check_submitted_and_redirect(student_code, room_code):
         return "Bạn đã nộp bài"  # 🔁 Trang kết quả
 
     return None  # ✅ Cho phép tiếp tục
+def is_student_late(room_code, student_code):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True, buffered=True)
+
+    cursor.execute("""
+        SELECT status 
+        FROM control_students 
+        WHERE room_code = %s AND student_code = %s
+    """, (room_code, student_code))
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return result['status'] == 'late' if result else False
 
 

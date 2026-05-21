@@ -5,7 +5,7 @@ import uuid
 from flask import Blueprint, request, jsonify, current_app, render_template, redirect, url_for
 from werkzeug.utils import secure_filename
 
-from extract_text import extract_chapters_from_pdf, extract_chapters_from_docx, extract_chapters_from_file, extract_chapters_from_pdffs, extract_chapters_from_pdf_advance
+from extract_text import extract_chapters_from_pdf, extract_chapters_from_docx, extract_chapters_from_file, extract_chapters_from_pdffs, extract_chapters_from_pdf_advance, extract_chapters_from_file_advace
 from generates_questions import generate_mcq_questions, generate_true_false_questions, generate_short_answer_questions, generate_tf_with_images
 
 from models.exam_model import save_mcq_questions, save_tf_questions, save_short_answer_questions
@@ -68,12 +68,17 @@ def distribute_counts(total, num_parts):
     return [base + (1 if i < remainder else 0) for i in range(num_parts)]
 
 def to_web_path(abs_path):
-    uploads_root = os.path.abspath("uploads")
-    try:
-        rel_path = os.path.relpath(abs_path, uploads_root).replace("\\", "/")
-        return "/uploads/" + rel_path
-    except:
-        return None  # nếu không xử lý được
+    abs_path = abs_path.replace("\\", "/")
+    idx = abs_path.find("/uploads/")
+    if idx != -1:
+        return abs_path[idx:]  # trả về từ /uploads/... trở đi
+    return None
+    # uploads_root = os.path.abspath("uploads")
+    # try:
+    #     rel_path = os.path.relpath(abs_path, uploads_root).replace("\\", "/")
+    #     return "/uploads/" + rel_path
+    # except:
+    #     return None  # nếu không xử lý được
 
 @highschool_bp.route('/generate_hs_questions', methods=['POST'])
 @login_required

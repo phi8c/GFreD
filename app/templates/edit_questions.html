@@ -16,6 +16,9 @@
       <input type="text" id="subject_name" name="subject_name" value="{{ exam_set.subject_name }}" required/>
     <button type="submit">💾 Lưu thông tin bộ đề</button>
     </form>
+    <a href="{{ url_for('question.index') }}" class="back-btn"
+            >← Quay lại trang chính</a
+          >
     <button id="check-duplicate-btn">🔍 Kiểm tra câu hỏi trùng</button>
 
     
@@ -55,10 +58,14 @@
 
         <div class="actions">
           <button 
+            id="edit-btn"
+            class="edit-btn"
             formaction="{{ url_for('question.update_question', question_id=question.id) }}" 
             formmethod="POST">💾 Cập nhật</button>
+            
 
           <button 
+            id="delete-btn"
             formaction="{{ url_for('question.delete_question', question_id=question.id) }}" 
             formmethod="POST"
             class="delete-btn"
@@ -68,7 +75,7 @@
       {% endfor %}
       
     </form>
-    <button type="button" onclick="confirmAndGenerateExams()">Tạo mã đề</button>
+    <button id="split-btn" class="split-btn" type="button" onclick="confirmAndGenerateExams()">Tạo mã đề</button>
       <p id="status" style="margin-top: 10px; color: green;"></p>
 
       <label for="num_versions">Số mã đề:</label>
@@ -90,7 +97,9 @@
         const formData = new FormData();
         formData.append("user_id", userId);
         formData.append("exam_set_id", examSetId);
+        
         const numVersions = parseInt(document.getElementById("num_versions").value);
+        formData.append("num_versions", numVersions);
 
         fetch('/generate-exams', {
             method: 'POST',
@@ -100,7 +109,7 @@
         .then(data => {
             if (data.status === "success") {
                 // Redirect đến trang chi tiết bộ đề
-                window.location.href = `/exam_set/${examSetId}`;
+                window.location.href = data.redirect_url;
             } else {
                 document.getElementById("status").innerText = "❌ " + data.message;
             }
@@ -195,6 +204,36 @@ document.getElementById("check-duplicate-btn").addEventListener("click", functio
     });
 });
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const examSetId = {{ exam_set_id | tojson }}; // lấy từ Flask render ra
+    fetch(`/check-exam-code/${examSetId}`)
+        .then(res => res.json())
+        .then(data => {
+            console.log("API trả về:", data);
+            if (data.has_code) {
+                // Danh sách ID hoặc class của các nút cần disable
+                const disableSelectors = [
+                    ".delete-btn",
+                    ".edit-btn",
+                    ".split-btn"
+                ];
+
+                disableSelectors.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(btn => {
+                        btn.disabled = true; // disable HTML
+                        btn.classList.add("disabled"); // thêm class để style mờ đi
+                        btn.style.pointerEvents = "none"; // chặn click
+                        btn.title = "Bộ đề đã được chia mã đề, không thể thao tác";
+                    });
+                });
+            }
+        })
+        .catch(err => console.error("Lỗi khi kiểm tra mã đề:", err));
+});
+</script>
+
 
 </body>
 </html>

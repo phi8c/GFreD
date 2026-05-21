@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models.exam_model import create_exam_room, assign_exam_code, get_exam_sets, get_room_id_by_code, get_original_questions_thpt2025, update_student_exam_score
 import random
 from gen_questions import get_db_connection, create_exam_set
-from utils.export_exam_utils import export_exam_package, export_exam_set_to_xlsx, import_questions_from_xlsx, render_exam_to_docx, render_exam_to_pdf, render_answer_to_docx, render_exam_with_answers_to_docx, export_student_exam_to_docx, export_original_exam_to_pdf, export_original_exam_to_docx, export_exam_with_answers_to_pdf, render_exam_with_answers_to_docx, export_original_exam_to_pdf_advance
+from utils.export_exam_utils import export_exam_package, export_exam_set_to_xlsx, import_questions_from_xlsx, render_exam_to_docx, render_exam_to_pdf, render_answer_to_docx, render_exam_with_answers_to_docx, export_student_exam_to_docx, export_original_exam_to_pdf, export_original_exam_to_docx, export_exam_with_answers_to_pdf, render_exam_with_answers_to_docx, export_original_exam_to_pdf_advance, export_question_set_to_docx, export_question_set_to_docx_scd, render_exam_to_docx_scd, export_exam_to_pdf_scd, export_original_exam_to_docx_no_answers, export_original_exam_to_pdf_advance_no_answers
 from flask import send_file
 from datetime import datetime, timedelta
 from app.controllers.extensions import socketio
@@ -205,7 +205,9 @@ def join_exam():
         student_id = request.form.get('student_id')
         class_name = request.form.get('class_name')
         room_code = request.form.get('room_code')
+        room_codes = request.form.get('room_code')
         email_input = request.form.get('email')
+        student_code = request.form.get('student_id')
         
         
         
@@ -219,31 +221,84 @@ def join_exam():
 
         if not exam_room:
             return "❌ Mã phòng thi không tồn tại."
+        
+        result_if_submitted = check_submitted_and_redirect(student_id, room_code)
+        if result_if_submitted:
+            return "bạn đã thi rồi không được vào lại"
+        # từ đoạn này là thay đổi logic kiểm tra thời gian ########
+        
+        cursor.execute("""
+            SELECT status FROM control_students
+            WHERE room_code = %s AND student_code = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (room_code, student_id))
+        status_record = cursor.fetchone()
+
+        bypass_time_check = False
+        if status_record:
+            if status_record['status'] == 'blocked':
+                cursor.close()
+                conn.close()
+                return "🚫 Bạn đã bị chặn khỏi phòng thi này và không được phép tham gia."
+            elif status_record['status'] == 'kicked':
+                bypass_time_check = True  # ✅ Cho phép tiếp tục mà không kiểm tra thời gian
+
+        # ✅ Nếu không bị kicked thì mới kiểm tra thời gian
+        if not bypass_time_check:
+            open_time = exam_room['open_time']
+            now = datetime.now()
+
+            if now < open_time:
+                return redirect(url_for('room_bp.waiting_room',
+                    student_name=full_name,
+                    student_id=student_id,
+                    email=email_input,
+                    room_code=room_code
+                ))
+
+            grace_period = exam_room.get('grace_period_minutes', 20)
+            allowed_until = open_time + timedelta(minutes=grace_period)
+            if now > allowed_until:
+                cursor.close()
+                conn.close()
+                #return "⏰ Đã quá thời gian cho phép vào phòng thi."
+                return redirect(url_for('room_bp.late_waiting_room',
+                    student_name=full_name,
+                    student_id=student_id,
+                    email=email_input,
+                    room_code=room_code
+                ))
+
+        
+        
+        
+        # thay đổi đến đoạn này #######
             
 
 
         # ✅ Kiểm tra khung thời gian vào phòng
-        open_time = exam_room['open_time']
+        # open_time = exam_room['open_time']
         
-        now = datetime.now()
+        # now = datetime.now()
 
-        if now < open_time:
-            return redirect(url_for('room_bp.waiting_room', 
-            student_name=full_name,
-            student_id=student_id,
-            email=email_input,
-            room_code=room_code
-             ))
-        grace_period = exam_room.get('grace_period_minutes', 20)
+        # if now < open_time:
+        #     return redirect(url_for('room_bp.waiting_room', 
+        #     student_name=full_name,
+        #     student_id=student_id,
+        #     email=email_input,
+        #     room_code=room_code
+        #      ))
+        # grace_period = exam_room.get('grace_period_minutes', 20)
         
 
-        allowed_until = open_time + timedelta(minutes=grace_period)
-        now = datetime.now()
+        # allowed_until = open_time + timedelta(minutes=grace_period)
+        # now = datetime.now()
 
-        if now > allowed_until:
-            cursor.close()
-            conn.close()
-            return "⏰ Đã quá thời gian cho phép vào phòng thi."
+        # if now > allowed_until:
+        #     cursor.close()
+        #     conn.close()
+        #     return "⏰ Đã quá thời gian cho phép vào phòng thi."
 
         # 1. Tìm exam_room theo room_code
         conn = get_db_connection()
@@ -268,6 +323,7 @@ def join_exam():
             return "❌ Mã phòng thi không tồn tại."
         exam_set_id = exam_room['exam_set_id']  # ✅ Lấy exam_set_id của phòng
         duration = exam_room['duration_minutes']
+        room_id = exam_room['id']
         
          # ✅ Lưu thông tin sinh viên vào bảng students (nếu chưa tồn tại)
          
@@ -318,6 +374,7 @@ def join_exam():
          return "❌ Không tìm thấy sinh viên trong danh sách phòng."
 
         email = student['email']
+        
 
 # ✅ Sinh mã OTP ngẫu nhiên 6 chữ số
         otp_code = str(random.randint(100000, 999999))
@@ -326,19 +383,27 @@ def join_exam():
         cursor.execute("""
        INSERT INTO otp_verifications (room_id, student_id, email, otp_code, expires_at)
        VALUES (%s, %s, %s, %s, NOW())
-       """, (room_code, student_id, email, otp_code))
+       """, (room_id, student_id, email, otp_code))
         conn.commit()
         
         session["student_name"] = full_name
         session["student_code"] = student_id
+        
+        
+        
+        session["room_code"] = room_codes
+        
+        
         #
         
         send_otp_email(email, otp_code)
+        
+        print("in ra exam_code trong tham gia thi", exam_code)
 
 
         # 👉 Chuyển sang student_exam.html, truyền lại thông tin
         return render_template("student_exam.html", room_code=room_code,
-                               student_name=full_name, student_code=student_id)
+                               student_name=full_name, student_code=student_id, exam_code=exam_code)
 
     return render_template("join_exam.html")
 @room_bp.route('/exam/<room_code>', methods=['GET', 'POST'])
@@ -350,9 +415,22 @@ def enter_exam_room(room_code):
         student_name = session.get("student_name", "")
         student_code = session.get("student_code", "")
         otp_input = request.form.get('otp_code')
+        room_code = request.form.get('room_code')
+        assigned_exam_code = request.form.get('exam_code')
+        print("nhan duoc room_code", room_code)
         # 1. Lấy email của sinh viên từ bảng otp_verification
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("SELECT id FROM exam_rooms WHERE room_code = %s", (room_code,))
+        room = cursor.fetchone()
+
+        if not room:
+            cursor.close()
+            conn.close()
+            return "❌ Mã phòng không tồn tại."
+
+        room_id = room['id']
 
         cursor.execute("""
             SELECT email, otp_code, expires_at 
@@ -360,7 +438,7 @@ def enter_exam_room(room_code):
             WHERE room_id = %s AND student_id = %s
             ORDER BY expires_at DESC
             LIMIT 1
-        """, (room_code, student_code))
+        """, (room_id, student_code))
         otp_record = cursor.fetchone()
 
         if not otp_record:
@@ -384,7 +462,7 @@ def enter_exam_room(room_code):
         cursor.execute("""
             DELETE FROM otp_verifications 
             WHERE room_id = %s AND student_id = %s
-        """, (room_code, student_code))
+        """, (room_id, student_code))
         conn.commit()
         
         
@@ -409,11 +487,11 @@ def enter_exam_room(room_code):
         cursor = conn.cursor(dictionary=True)
         
         cursor.execute("""
-    SELECT status FROM control_students
-    WHERE room_code = %s AND student_code = %s
-    ORDER BY created_at DESC
-    LIMIT 1
-""", (room_code, student_code))
+        SELECT status FROM control_students
+        WHERE room_code = %s AND student_code = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+        """, (room_code, student_code))
 
         status_record = cursor.fetchone()
 
@@ -439,18 +517,23 @@ def enter_exam_room(room_code):
                 'student_name': student_name,
                 'room_code': room_code
                 }, namespace='/webrtc')
+                
+                now = datetime.now()
+        
+                update_exam_start_time(student_code, room_code, now)
 
                 cursor.close()
                 conn.close()
                 
-                return render_template('waiting_approval.html', student_code=student_code, room_code=room_code)
+                
+                return render_template('waiting_approval.html', student_code=student_code, room_code=room_code, exam_code=assigned_exam_code, student_name=student_name)
             
 
-# Nếu không có bản ghi nào hoặc trạng thái bình thường thì cho phép tiếp tục
+        # Nếu không có bản ghi nào hoặc trạng thái bình thường thì cho phép tiếp tục
         # Nếu không có bản ghi nào hoặc trạng thái bình thường thì cho phép tiếp tục
         cursor.close()
         conn.close()
-# Cho phép vào phòng (return None hoặc code tiếp theo xử lý)
+        # Cho phép vào phòng (return None hoặc code tiếp theo xử lý)
         
         
 
@@ -463,8 +546,10 @@ def enter_exam_room(room_code):
         
         
 
-        # ✅ Gán mã đề theo bộ đề
-        assigned_exam_code = assign_exam_code(room_code, exam_set_id)
+        # ✅ Gán mã đề theo bộ đề request.form.get('room_code')
+        #assigned_exam_code = assign_exam_code(room_code, exam_set_id)
+        #assigned_exam_code = request.args.get('exam_code')
+        print("exam_code trong enter_exam_room", assigned_exam_code)
         
         
         now = datetime.now()
@@ -485,7 +570,7 @@ def enter_exam_room(room_code):
         WHERE student_code = %s AND room_code = %s
         ORDER BY id DESC
         LIMIT 1
-    """, (student_code, room_code))
+        """, (student_code, room_code))
             student_exam = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -494,6 +579,7 @@ def enter_exam_room(room_code):
                 return "❌ Không tìm thấy thông tin làm bài của sinh viên."
             return redirect(url_for('exam_hs.thpt2025_exam', room_code=room_code, student_exam_id=student_exam['id']))
         else:
+            print("in ra room_code enter exam romm", room_code)
             return redirect(url_for('student_bp.start_exam',
                                 student_name=student_name,
                                 student_code=student_code,
@@ -503,6 +589,7 @@ def enter_exam_room(room_code):
      return render_template('student_exam.html', room_code=room_code)
 @room_bp.route('/start-exam/<int:student_id>/<int:exam_room_id>/<exam_code>', methods=['GET'])
 def start_exam(student_id, exam_room_id, exam_code):
+    
     return f"Sinh viên ID: {student_id}, Mã phòng: {exam_room_id}, Mã đề: {exam_code}"
 @room_bp.route('/select-exam-set', methods=['GET'])
 def select_exam_set():
@@ -514,6 +601,8 @@ def select_exam_set():
     conn.close()
     
     return render_template('export_exam.html', exam_sets=exam_sets)
+
+
 
 @room_bp.route('/export-exam', methods=['GET'])
 def export_exam_view():
@@ -585,6 +674,8 @@ def waiting_room():
     
     # open_time là kiểu datetime từ DB
     open_time_str = exam_room['open_time'].strftime('%Y-%m-%dT%H:%M:%S')
+    #exam_set_id = room['exam_set_id']
+    room_id = exam_room['id']
 
 
     # ✅ Khởi tạo phiên thi nếu cần
@@ -595,7 +686,8 @@ def waiting_room():
         student_id=student_id,
         email=email,
         room_code=room_code,
-        open_time=open_time_str
+        open_time=open_time_str,
+        room_id = room_id
     )
 @room_bp.route('/enter-exam')
 def enter_exam():
@@ -603,6 +695,8 @@ def enter_exam():
     student_id = request.args.get("student_id")
     email = request.args.get("email")
     room_code = request.args.get("room_code")
+    student_code = request.args.get("student_id")
+    #room_id = request.args.get("room_id")
 
     # Lấy thông tin phòng thi
     conn = get_db_connection()
@@ -614,6 +708,8 @@ def enter_exam():
 
     if not exam_room:
         return "❌ Không tìm thấy phòng thi."
+    room_id = exam_room['id']
+    print("in ra room_id ở trong enter", room_id)
 
     # ✅ Gọi lại hàm khởi tạo phiên thi
     start_exam_session(
@@ -621,8 +717,24 @@ def enter_exam():
         student_id=student_id,
         email=email,
         room_code=room_code,
-        exam_room=exam_room
+        exam_room=exam_room,
+        room_id=room_id
     )
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+    SELECT exam_code FROM student_exams
+    WHERE student_code = %s AND room_code = %s
+""", (student_id, room_code))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        exam_code = row['exam_code']
+        print(f"[INFO] Exam code của sinh viên {student_id} trong phòng {room_code} là: {exam_code}")
+    else:
+        print(f"[WARN] Không tìm thấy exam_code cho sinh viên {student_id} trong phòng {room_code}")
 
     # ✅ Chuyển sang giao diện làm bài
     
@@ -631,13 +743,66 @@ def enter_exam():
     return render_template("student_exam.html",
                            student_name=student_name,
                            student_code=student_id,
-                           room_code=room_code)
+                           room_code=room_code,
+                           room_id = room_id,
+                           exam_code = exam_code
+                           )
 
 
+@room_bp.route('/late-waiting-room')
+def late_waiting_room():
+    student_name = request.args.get('student_name')
+    student_id = request.args.get('student_id')
+    email = request.args.get('email')
+    room_code = request.args.get('room_code')
+
+    if not all([student_name, student_id, email, room_code]):
+        return "Thiếu thông tin truy cập phòng chờ muộn.", 400
+
+    # Lấy thông tin exam_room
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM exam_rooms WHERE room_code = %s", (room_code,))
+    exam_room = cursor.fetchone()
+
+    if not exam_room:
+        return "❌ Không tìm thấy phòng thi.", 404
+
+    room_id = exam_room['id']
+
+    # ✅ Ghi log vào control_students với trạng thái 'late'
+    cursor.execute("""
+        INSERT INTO control_students (student_code, room_code, status)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE status = 'late'
+    """, (student_id, room_code, 'late'))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    # ✅ Emit socket tới giảng viên
+    # hoặc wherever bạn khai báo socket
+    socketio.emit('late_join_request', {
+        'student_name': student_name,
+        'student_id': student_id,
+        'email': email,
+        'room_code': room_code
+    }, namespace= '/webrtc')
+
+    return render_template("late_waiting_room.html", 
+        student_name=student_name,
+        student_id=student_id,
+        email=email,
+        room_code=room_code,
+        room_id=room_id
+    )
 
 
 
 # ROUTE NÀY MỚI THÊM VÀO ĐỂ XUẤT CÂU HỎI XLXS
+@room_bp.route("/exam_incomplete")
+def exam_incomplete():
+    return render_template("exam_incomplete.html")
 
 @room_bp.route('/export-exam-questions-xlsx')
 @login_required
@@ -697,6 +862,31 @@ def export_exam_questions_xlsx_view():
         print(f"Lỗi khi xuất file Excel: {e}") # Log lỗi để debug
         return "⚠️ Có lỗi xảy ra khi xuất file.", 500
     
+    
+def check_submitted_and_redirect(student_code, room_code):
+    if not student_code or not room_code:
+        flash("Thiếu thông tin sinh viên hoặc phòng thi.")
+        return "thiếu thông tin cá nhân"
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True, buffered=True)
+    cursor.execute("""
+        SELECT 1
+        FROM student_exams
+        WHERE student_code = %s AND room_code = %s
+        LIMIT 1
+    """, (student_code, room_code))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if row:
+        flash("Bạn đã vào thi. Không thể quay lại phòng thi.")
+        return "Bạn đã nộp bài"  # 🔁 Trang kết quả
+
+    return None  # ✅ Cho phép tiếp tục
+
+    
 
 
 
@@ -716,7 +906,7 @@ def log_event():
 
 
 
-def start_exam_session(student_name, student_id, email, room_code, exam_room):
+def start_exam_session(student_name, student_id, email, room_code, exam_room, room_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -726,6 +916,8 @@ def start_exam_session(student_name, student_id, email, room_code, exam_room):
         WHERE room_code = %s AND student_code = %s
     """, (room_code, student_id))
     existing_exam = cursor.fetchone()
+    
+    
 
     if existing_exam:
         student_exam_id = existing_exam['id']
@@ -762,8 +954,15 @@ def start_exam_session(student_name, student_id, email, room_code, exam_room):
     cursor.execute("""
         INSERT INTO otp_verifications (room_id, student_id, email, otp_code, expires_at)
         VALUES (%s, %s, %s, %s, NOW() + INTERVAL 5 MINUTE)
-    """, (room_code, student_id, email, otp_code))
+    """, (room_id, student_id, email, otp_code))
     conn.commit()
+    
+    session["student_name"] = student_name
+    session["student_code"] = student_id
+        
+        
+        
+    session["room_code"] = room_code
 
     send_otp_email(email, otp_code)
 
@@ -1234,6 +1433,8 @@ def import_exam_questions_xlsx_view():
     # Hiển thị form upload khi người dùng truy cập bằng phương thức GET
     return render_template('handle_insert_questions.html')
 
+
+
 @room_bp.route('/export-exam-code/<int:exam_code_id>', methods=['GET'])
 def export_exam_code(exam_code_id):
     export_format = request.args.get("format", "pdf")  # "pdf" hoặc "docx"
@@ -1273,18 +1474,65 @@ def export_answer_code(exam_code_id):
         return "Không tìm thấy mã đề", 404
 
     if export_format == "docx":
-        doc = render_exam_with_answers_to_docx(data)
+        doc = render_exam_to_docx_scd(data)
         buf = BytesIO()
         doc.save(buf)
         buf.seek(0)
         return send_file(buf, as_attachment=True, download_name=f"dapan_{data['exam_code']}.docx",
                          mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     elif export_format == "pdf":
-        buf = export_exam_with_answers_to_pdf(data)
+        buf = export_exam_to_pdf_scd(data)
         return send_file(buf, as_attachment=True, download_name=f"dapan_{data['exam_code']}.pdf",
                          mimetype="application/pdf")
     else:
         return "Chỉ hỗ trợ định dạng docx hoặc pdf", 400
+    
+    
+    
+@room_bp.route("/export-docx/questions/<int:exam_set_id>")
+def export_questions_docx(exam_set_id):
+    try:
+        # Bước 1: Lấy danh sách câu hỏi gốc (MCQ)
+        data = get_full_mcq_questions_by_exam_set(exam_set_id)
+
+        if not data:
+            return "Không tìm thấy câu hỏi nào để xuất.", 404
+
+        # Bước 2: Gọi hàm xuất DOCX
+        buffer = export_question_set_to_docx(data)
+
+        filename = f"Bo_de_{exam_set_id}.docx"
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+    except Exception as e:
+        return f"Lỗi khi tạo file: {str(e)}", 500
+@room_bp.route("/export-docx-scd/questions/<int:exam_set_id>")
+def export_questions_docx_scd(exam_set_id):
+    try:
+        # Bước 1: Lấy danh sách câu hỏi gốc
+        data = get_full_mcq_questions_by_exam_set(exam_set_id)
+
+        if not data:
+            return "Không tìm thấy câu hỏi nào để xuất.", 404
+
+        # Bước 2: Gọi hàm xuất DOCX dạng bảng
+        buffer = export_question_set_to_docx_scd(data)
+
+        filename = f"Bo_de_{exam_set_id}.docx"
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+    except Exception as e:
+        return f"Lỗi khi tạo file: {str(e)}", 500
+
+
 
 
 
@@ -1548,7 +1796,7 @@ def export_original_exam(exam_set_id):
 
     # Xuất file
     if export_format == "docx":
-        doc = export_original_exam_to_docx(exam_type, data)
+        doc = export_original_exam_to_docx_no_answers(exam_type, data)
         buf = BytesIO()
         doc.save(buf)
         buf.seek(0)
@@ -1557,7 +1805,7 @@ def export_original_exam(exam_set_id):
         return send_file(buf, as_attachment=True, download_name=filename, mimetype=mime_type)
 
     elif export_format == "pdf":
-        buf = export_original_exam_to_pdf_advance(exam_type, data)
+        buf = export_original_exam_to_pdf_advance_no_answers(exam_type, data)
         filename = f"de_goc_{exam_set_id}.pdf"
         return send_file(buf, as_attachment=True, download_name=filename, mimetype="application/pdf")
 

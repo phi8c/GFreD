@@ -1,0 +1,92 @@
+/* Reset CSS */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #ff6a00, #ee0979);
+  color: #333;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+  padding: 30px 20px;
+  text-align: center;
+  animation: fadeIn 0.8s ease;
+}
+
+/* Icon */
+.icon {
+  font-size: 60px;
+  margin-bottom: 15px;
+  color: #e63946;
+}
+
+/* Heading */
+.card h1 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #222;
+}
+
+/* Paragraph */
+.card p {
+  font-size: 16px;
+  margin-bottom: 25px;
+  line-height: 1.5;
+  color: #555;
+}
+
+/* Button */
+.btn {
+  display: inline-block;
+  background: #e63946;
+  color: #fff;
+  padding: 12px 25px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: #d62839;
+  transform: translateY(-2px);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card h1 {
+    font-size: 20px;
+  }
+  .card p {
+    font-size: 14px;
+  }
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}

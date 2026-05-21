@@ -436,6 +436,29 @@ def save_student_exam(student_name, student_code, room_code, exam_code):
     conn.close()
     return student_exam_id
 
+
+def get_student_exam_id(student_code, room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT id AS student_exam_id
+        FROM student_exams
+        WHERE student_code = %s AND room_code = %s
+        LIMIT 1
+    """
+    cursor.execute(query, (student_code, room_code))
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if result:
+        return result['student_exam_id']
+    else:
+        return None  # hoặc raise Exception nếu muốn xử lý cứng
+
+
 def save_student_answer(student_exam_id, question_id, selected_answer, is_correct):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -610,6 +633,9 @@ def sel_exam_code_id_by_code(exam_code):
     result = cursor.fetchone()
     conn.close()
     return result[0] if result else None
+
+
+
 def get_latest_exam_set_id(user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)

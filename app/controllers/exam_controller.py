@@ -4,11 +4,10 @@ from models.exam_model import get_all_questions, create_exam_code, save_exam_que
 import random
 
 def shuffle_exam_versions(user_id, exam_set_id, num_versions):
-    # questions = get_all_questions()
     questions = get_questions_by_exam_set(user_id, exam_set_id)
 
     for i in range(1, num_versions + 1):
-        exam_code = f"{exam_set_id}-{i:03}"  # Ví dụ: 5-001  # mã đề 001, 002, ...
+        exam_code = f"{exam_set_id}-{i:03}"  # Ví dụ: 5-001
         exam_code_id = create_exam_code(exam_code, exam_set_id)
 
         # Trộn thứ tự câu hỏi
@@ -16,31 +15,33 @@ def shuffle_exam_versions(user_id, exam_set_id, num_versions):
         random.shuffle(shuffled_questions)
 
         for order, q in enumerate(shuffled_questions, start=1):
-            # Trộn đáp án
-            options = [q["answer_a"], q["answer_b"], q["answer_c"], q["answer_d"]]
-            correct_text = q["correct_answer"]
+            # Lấy đáp án đúng theo nhãn "A"/"B"/"C"/"D"
+            correct_label = q["correct_answer"]  # Ví dụ: "B"
+            correct_text = q.get(f"answer_{correct_label.lower()}")  # Lấy nội dung đáp án đúng
 
-            paired = list(zip(["A", "B", "C", "D"], options))
+            # Trộn đáp án
+            paired = list(zip(["A", "B", "C", "D"], [
+                q["answer_a"], q["answer_b"], q["answer_c"], q["answer_d"]
+            ]))
             random.shuffle(paired)
             new_labels, new_options = zip(*paired)
 
-            # Tìm đáp án đúng mới
-            # new_correct = next(
-            #     opt for label, opt in paired if opt == correct_text
-            # )
-            # Xác định đáp án đúng sau shuffle
+            # Tìm lại nhãn đúng sau shuffle
             new_correct_label = None
             for label, option in paired:
-                if option == correct_text:
+                if option.strip() == correct_text.strip():
                     new_correct_label = label
                     break
 
             if new_correct_label is None:
                 print(f"🚨 Không tìm được đáp án đúng sau shuffle cho câu hỏi ID {q['id']}")
+                print(f"    Đáp án đúng ban đầu: {repr(correct_text)}")
+                print("    Các lựa chọn sau shuffle:")
+                for label, option in paired:
+                    print(f"      {label}: {repr(option)}")
                 continue
 
             # Các câu hỏi đơn thuần: chapter, difficulty = None
-
             save_exam_question(
                 exam_code_id,
                 q["id"],
@@ -50,6 +51,7 @@ def shuffle_exam_versions(user_id, exam_set_id, num_versions):
                 chapter=None,
                 difficulty=None
             )
+
 def shuffle_advanced_exam_versions(user_id, exam_set_id, num_versions):
     questions = get_questions_by_exam_set(user_id, exam_set_id)
 

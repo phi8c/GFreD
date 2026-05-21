@@ -428,33 +428,35 @@ def get_class_progress(class_name):
 def delete_exam_room(room_code):
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        # 1. Lấy exam_room_id từ room_code
+        # 1. Lấy room_id từ exam_rooms
         cursor.execute("SELECT id FROM exam_rooms WHERE room_code = %s", (room_code,))
-        row = cursor.fetchone()
-        if not row:
+        room_row = cursor.fetchone()
+        if not room_row:
             return jsonify({"status": "error", "message": "Không tìm thấy phòng thi."}), 404
 
-        exam_room_id = row[0]
+        room_id = room_row["id"]
 
-        # 2. Xóa dữ liệu liên quan theo thứ tự phụ thuộc
-        tables_to_delete = [
-            ("student_tf_submissions", "exam_room_id"),
-            ("student_sa_submissions", "exam_room_id"),
-            ("student_exam_submissions", "exam_room_id"),
-            ("student_exams", "room_code"),
-            ("room_student_status", "room_code"),
-            ("room_students", "room_code"),
-        ]
+        # 2. Lấy danh sách exam_room_id từ student_exams
+        cursor.execute("SELECT id FROM student_exams WHERE room_code = %s", (room_code,))
+        student_exams = cursor.fetchall()
+        exam_room_ids = [row["id"] for row in student_exams]
 
-        for table, column in tables_to_delete:
-            sql = f"DELETE FROM {table} WHERE {column} = %s"
-            param = exam_room_id if 'exam_room_id' in column else room_code
-            cursor.execute(sql, (param,))
+        # 3. Xóa dữ liệu liên quan
+        if exam_room_ids:
+            format_strings = ','.join(['%s'] * len(exam_room_ids))
 
-        # 3. Xóa phòng thi
-        cursor.execute("DELETE FROM exam_rooms WHERE room_code = %s", (room_code,))
+            cursor.execute(f"DELETE FROM student_tf_submissions WHERE exam_room_id IN ({format_strings})", exam_room_ids)
+            cursor.execute(f"DELETE FROM student_sa_submissions WHERE exam_room_id IN ({format_strings})", exam_room_ids)
+            cursor.execute(f"DELETE FROM student_exam_submissions WHERE exam_room_id IN ({format_strings})", exam_room_ids)
+            cursor.execute(f"DELETE FROM student_exams WHERE id IN ({format_strings})", exam_room_ids)
+
+        cursor.execute("DELETE FROM control_students WHERE room_code = %s", (room_code,))
+        cursor.execute("DELETE FROM room_students WHERE room_id = %s", (room_id,))
+
+        # 4. Xóa phòng thi cuối cùng
+        cursor.execute("DELETE FROM exam_rooms WHERE id = %s", (room_id,))
 
         conn.commit()
         cursor.close()
@@ -464,6 +466,7 @@ def delete_exam_room(room_code):
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
         
 ##### HÀM NÀY MỚI THÊM VÀO ĐỂ XUẤT BÀI LÀM SINH VIÊN

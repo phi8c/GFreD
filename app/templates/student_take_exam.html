@@ -85,7 +85,7 @@
       </div>
       <button id="shareScreenBtn">📺 Chia sẻ màn hình</button>
 
-    <form method="POST" action="{{ url_for('student_bp.submit_exam', room_code=room_code) }}">
+    <form id="examForm" method="POST" action="{{ url_for('student_bp.submit_exam', room_code=room_code) }}">
         <input type="hidden" name="exam_code" value="{{ exam_code }}">
         <input type="hidden" name="student_exam_id" value="{{ student_exam_id }}">
         <input type="hidden" name="room_code" value="{{ room_code }}">
@@ -121,6 +121,12 @@
   const examForm = document.getElementById("examForm");
   let interval;
 
+  function notAllAnswered() {
+  const totalQuestions = {{ questions|length }};
+  const answered = document.querySelectorAll("input[type=radio]:checked").length;
+  return answered < totalQuestions;
+}
+
   function updateCountdown() {
     const now = new Date();
     const remaining = endTime - now;
@@ -129,7 +135,12 @@
       countdown.textContent = "⏱ Hết giờ!";
       clearInterval(interval);
       alert("Đã hết giờ, hệ thống sẽ tự động nộp bài.");
+      if (notAllAnswered()) {
+      // Nếu chưa làm hết → chuyển sang trang thông báo tĩnh
+      window.location.href = "/exam_incomplete";
+    } else {
       examForm.submit();
+    }
     } else {
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
@@ -169,6 +180,8 @@ socket.emit('new-student-joined', {
 });
 
 const peers = {};
+let localCameraTrack = null;
+let localScreenTrack = null;
 
 // Gửi offer đến giảng viên
 async function sendToInstructor(type, stream) {
@@ -239,6 +252,7 @@ async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     document.getElementById('localCamera').srcObject = stream;
+    localCameraTrack = stream.getVideoTracks()[0];
     await sendToInstructor('camera', stream);
     console.log("✅ Đã gửi camera đến giảng viên");
   } catch (err) {
@@ -250,6 +264,7 @@ async function startCamera() {
 async function startScreenShare() {
   try {
     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    localScreenTrack = screenStream.getVideoTracks()[0];
     await sendToInstructor('screen', screenStream);
     console.log("✅ Đã chia sẻ màn hình đến giảng viên");
   } catch (err) {
@@ -261,6 +276,8 @@ window.onload = async () => {
   await startCamera();
   await startScreenShare();
 }
+
+
 
 socket.on("resend-stream", () => {
   console.log("📥 Nhận yêu cầu resend-stream từ giảng viên");
@@ -287,10 +304,7 @@ socket.on("resend-stream", () => {
 
 
 <script>
-function sendLog(type, detail = "") {
-    const timestamp = new Date().toISOString();
-    console.log(`[LOG][${timestamp}] ${type} - ${detail}`);
-}
+
 
 // 👁️ Phát hiện DevTools
 setInterval(() => {

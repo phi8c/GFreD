@@ -1,9 +1,10 @@
 from app.controllers.extensions import socketio
 from controllers.room_controller import  join_exam
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, disconnect
 from gen_questions import get_db_connection
 from models.exam_model import create_exam_room, assign_exam_code, get_exam_sets, get_room_id_by_code
 from controllers.room_controller import is_thpt_2025_exam
+from flask import Blueprint, session
 
 
 
@@ -62,6 +63,14 @@ def handle_teacher_rejoined(data):
         emit('resend-stream', {}, room=room_code)
 
 
+@socketio.on("allow_late_student", namespace='/webrtc')
+def handle_allow_late_student(data):
+    
+    student_code = data.get('student_code')
+    room_code = data.get('room_code')
+    
+    student_room = f"student-{data['student_code']}"
+    emit("allowed_to_join", {"room_code": room_code, "student_code": student_code}, room=student_code)
 
 @socketio.on('approve_student', namespace='/webrtc')
 def handle_approve_student(data):
@@ -127,7 +136,7 @@ def handle_approve_student(data):
     conn.close()
     
     
-    print("in ra mã phòng", room_code)
+    print("in ra mã phòng trong socket event", room_code)
 
     # 📡 Gửi thông tin về client
     emit('student_approved', {
@@ -139,6 +148,59 @@ def handle_approve_student(data):
     }, room=student_code)
 
     # Gửi sự kiện cho chính sinh viên này để cho phép vào
+# đoạn socket này mới thêm vào
+
+@socketio.on('disconnect', namespace='/webrtc')
+def handle_disconnect():
+    student_code = session.get('student_code')
+    room_code = session.get('room_code')
+
+    if student_code and room_code:
+        print(f"[DISCONNECT] Sinh viên {student_code} đã mất kết nối khỏi phòng {room_code}")
+        
+    else:
+        print("[DISCONNECT] Không tìm thấy session hợp lệ, không thể xác định sinh viên.")
+        
+    # conn = get_db_connection()
+    # cursor = conn.cursor()
+
+    # try:
+    #     cursor.execute("""
+    #         DELETE FROM student_exams
+    #         WHERE student_code = %s AND room_code = %s AND submitted = 0
+    #     """, (student_code, room_code))
+    #     conn.commit()
+    #     print(f"❌ Đã xoá phiên thi của sinh viên {student_code} trong phòng {room_code}")
+    # except Exception as e:
+    #     print(f"⚠️ Lỗi khi xóa student_exam: {e}")
+    # finally:
+    #     cursor.close()
+    #     conn.close()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT submitted 
+        FROM student_exams
+        WHERE student_code=%s AND room_code=%s
+    """, (student_code, room_code))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if not row:
+        return
+    
+    # Chỉ remove nếu chưa nộp bài
+    # if row['submitted'] == 0:
+    #     emit('remove_student', {
+    #         'student_code': student_code
+    #     }, room=room_code)
+    #emit('remove_student', {'student_code': student_code}, room=room_code)
+
+
+
+
+# kêt thúc đoạn socket mới thêm vào
     
 
 
@@ -215,14 +277,26 @@ def handle_kick_student(data):
     # 1. Cập nhật trạng thái trong CSDL
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT start_time FROM student_exams
+        WHERE room_code = %s AND student_code = %s
+    """, (room_code, student_code))
+    row = cursor.fetchone()
+
+    start_time = row[0] if row else None
 
     cursor.execute("""
-        INSERT INTO control_students (room_code, student_code, status)
-        VALUES (%s, %s, 'kicked')
-        ON DUPLICATE KEY UPDATE status = 'kicked', created_at = NOW()
-    """, (room_code, student_code))
+        INSERT INTO control_students (room_code, student_code, status, first_start_time)
+        VALUES (%s, %s, 'kicked', %s)
+        ON DUPLICATE KEY UPDATE
+            status = 'kicked',
+            first_start_time = IF(first_start_time IS NULL, VALUES(first_start_time), first_start_time),
+            created_at = NOW()
+    """, (room_code, student_code, start_time))
     
     # XÓA phiên thi student_exams
+    # ON DUPLICATE KEY UPDATE status = 'kicked', created_at = NOW()
     cursor.execute("""
         DELETE FROM student_exams
         WHERE room_code = %s AND student_code = %s

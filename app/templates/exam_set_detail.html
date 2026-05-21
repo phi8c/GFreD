@@ -30,7 +30,7 @@
           >
             📊 Xuất file Excel câu hỏi
           </a>
-         <a 
+         <a id="create-room-btn"
           href="{{ url_for('room_bp.exam_ui', exam_set_id=exam_set_id) }}" 
           class="export-button"
             >
@@ -39,6 +39,11 @@
         <a href="#" id="add-to-bank-link" style="display: none;" class="export-button" data-exam-set-id="{{ exam_set_id }}">
           ➕ Thêm vào ngân hàng
         </a>
+        <a href="{{ url_for('question.edit_questions') }}?exam_set_id={{ exam_set_id }}" class="export-button">
+        ✏️ Xem bộ đề gốc
+        </a>
+
+
 
 
         </div>
@@ -76,6 +81,10 @@
               Xuất đáp án
               </a>
               {% else %}
+              <a href="{{ url_for('room_bp.export_questions_docx_scd', exam_set_id=exam_set_id) }}" class="btn btn-primary">
+               Xuất đề gốc (.docx)
+              </a>
+
               <a href="/export-original-exam/{{ exam_set_id }}?format=docx" class="btn btn-primary">
               Xuất đề gốc (.docx)
               </a>
@@ -279,6 +288,25 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("create-room-btn");
+    const examSetId = {{ exam_set_id }}; // Flask render ra
+
+    fetch(`/check-exam-code/${examSetId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.has_code) {
+                btn.style.display = "none";
+            }
+        })
+        .catch(err => {
+            console.error("Lỗi kiểm tra chia mã đề:", err);
+            btn.style.display = "none"; // Ẩn nếu có lỗi
+        });
+});
+</script>
+
 
   </body>
 </html>

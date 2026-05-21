@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chờ giảng viên duyệt vào phòng thi</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h2>🎓 Xin chào {{ student_name }}</h2>
+    <p>Bạn đang chờ giảng viên cho phép vào thi do vào trễ.</p>
+
+    <div id="status" style="color: blue;">⏳ Đang chờ phê duyệt từ giảng viên...</div>
+
+    <script>
+        const studentId = "{{ student_id }}";
+        const studentName = "{{ student_name }}";
+        const email = "{{ email }}";
+        const roomCode = "{{ room_code }}";
+
+        const socket = io('/webrtc', {
+        path: '/socket.io',
+        transports: ['websocket', 'polling']
+        });
+
+
+        // Sinh viên tham gia room riêng để nhận phản hồi
+        //socket.emit("join_room", { room: `student-${studentId}` });
+        socket.on('connect', () => {
+        console.log("🔗 Đã kết nối socket để chờ duyệt");
+        socket.emit('join_room', { room: studentId }); // studentCode là room socket riêng
+        });
+
+        let redirected = false;
+
+        socket.on("allowed_to_join", function(data) { 
+            console.log("in ra data", data);
+            if (redirected) return;
+            if (data.student_code === studentId && data.room_code === roomCode) {
+                redirected = true;
+
+                document.getElementById("status").innerText = "✅ Giảng viên đã duyệt, đang chuyển sang phòng thi...";
+
+                // Chuyển hướng đến route xử lý logic join-room (tính thời gian làm bài...)
+                const params = new URLSearchParams({
+                    student_name: studentName,
+                    student_id: studentId,
+                    email: email,
+                    room_code: roomCode
+                });
+                setTimeout(() => {
+                    window.location.href = "/enter-exam?" + params.toString();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

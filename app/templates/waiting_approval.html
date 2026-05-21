@@ -62,6 +62,10 @@
   <script>
     const studentCode = "{{ student_code }}";   // render từ Flask
     const roomCode = "{{ room_code }}";         // render từ Flask
+    const studentName = "{{ student_name }}";
+    const examCode = "{{ exam_code }}";
+
+
 
     const socket = io('/webrtc', { path: '/socket.io' });
 
@@ -72,18 +76,25 @@
 
     socket.on('student_approved', function (data) {
     const { room_code, exam_code, student_exam_id, exam_type } = data;
+    console.log('Room Code:', room_code);
+    console.log('Exam Code:', exam_code);
+    console.log('Student Exam ID:', student_exam_id);
+    console.log('Exam Type:', exam_type);
+
 
     if (exam_type === 'thpt2025') {
       window.location.href = `/thpt2025/exam/${student_exam_id}`;
     } else {
-      window.location.href = `/take-exam/${room_code}`;
+      //window.location.href = `/take-exam/${room_code}`;
+      window.location.href = `/take-exam/${room_code}?student_name=${encodeURIComponent(studentName)}&student_code=${studentCode}&exam_code=${examCode}`;
+
     }
   });
 
     socket.on('student_rejected', (data) => {
       console.log("❌ Bị từ chối vào lại phòng thi");
       alert("Bạn đã bị từ chối vào phòng thi.");
-      window.location.href = '/exam-register';  // hoặc /register
+      window.location.href = '/join-room';  // hoặc /register
     });
 
   </script>

@@ -157,7 +157,7 @@
     <div class="menu-wrapper">
       <button class="menu-button" onclick="toggleMenu('${data.student_code}')">⋮</button>
       <div class="dropdown-menu" id="menu-${data.student_code}">
-        <button onclick="highlightStudent('${data.student_code}')">🔖 Đánh dấu</button>
+        <button onclick="highlightStudents('${data.student_code}')">🔖 Đánh dấu</button>
         <button onclick="kickStudent('${data.student_code}')">👢 Kick</button>
         <button onclick="blockStudent('${data.student_code}')">⛔ Chặn</button>
       </div>
@@ -169,7 +169,7 @@
       <video id="remoteVideo-camera-${data.student_code}" autoplay playsinline muted width="150" height="100"></video>
       <video id="remoteVideo-screen-${data.student_code}" autoplay playsinline muted width="150" height="100"></video>
       </div>
-      <div class="status">🟢 Vừa vào phòng</div>
+      <div class="status">🟢 Đã vào phòng</div>
       ${data.status === 'submitted' ? `<div class="score">🎯 Điểm: ${data.score}</div>` : ''}
     `;
     //grid.appendChild(box);
@@ -226,11 +226,13 @@
           // 🟡 Lưu studentCode vào localStorage (chỉ 1 lần)
           const key = `connectedStudents-${roomCode}`;  // roomCode phải là biến toàn cục
           const connected = JSON.parse(localStorage.getItem(key) || "[]");
+          //let connected = JSON.parse(localStorage.getItem(key) || "[]");
 
           if (!connected.includes(studentCode)) {
-          connected.push(studentCode);
-          localStorage.setItem(key, JSON.stringify(connected));
+           connected.push(studentCode);
+            localStorage.setItem(key, JSON.stringify(connected));
           }
+          
 
           videoEl.onloadedmetadata = () => {
             videoEl.play().catch(err => console.warn("Không thể phát video:", err));
@@ -405,6 +407,53 @@ function rejectStudent(studentCode) {
     if (item) item.remove();
 }
 
+// đoạn này mới thêm vào
+
+socket.on('late_join_request', (data) => {
+    if (data.room_code !== room) return;
+
+    const waitingList = document.getElementById('waiting-approval-list');
+    if (!waitingList) return;
+    console.log("in ra tt ở phòng quản lý", data);
+
+    const studentCode = data.student_id;
+    const studentName = data.student_name;
+
+    // Kiểm tra nếu đã có trong danh sách thì không thêm lại
+    if (document.getElementById(`waiting-${studentCode}`)) return;
+
+    const item = document.createElement('div');
+    item.className = 'waiting-student';
+    item.id = `waiting-${studentCode}`;
+    item.innerHTML = `
+      <strong>${studentName}</strong> (MSSV: ${studentCode})<br>
+      <button onclick="approveLateStudent('${studentCode}')">✅ Duyệt</button>
+      <button onclick="rejectStudent('${studentCode}')">❌ Từ chối</button>
+      <hr>
+    `;
+    waitingList.appendChild(item);
+});
+
+function approveLateStudent(studentCode) {
+    // Gửi socket cho sinh viên báo đã được duyệt vào
+    console.log("đá nhấn");
+    
+    socket.emit('allow_late_student', {
+        
+        room_code: room,
+        student_code: studentCode
+    });
+
+    // Xóa khỏi danh sách chờ duyệt
+    const item = document.getElementById(`waiting-${studentCode}`);
+    if (item) item.remove();
+}
+
+
+
+
+// kết thúc đoạn mới thêm vào
+
 
 
     // kết thúc đoạn mới thêm vào
@@ -543,6 +592,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+
   function renderScoreChart(scoreDist) {
     const chartContainer = document.getElementById("score-chart");
     chartContainer.innerHTML = "";
@@ -646,7 +696,7 @@ document.addEventListener('click', function (e) {
 
 // đây là hàm mới thêm vào để đanh dấu và bỏ đánh dấu sinh viên
 
-function highlightStudent(studentCode) {
+function highlightStudents(studentCode) {
   const box = document.getElementById(`box-${studentCode}`);
   const isMarked = box.getAttribute('data-marked') === 'true';
 
@@ -756,6 +806,7 @@ function highlightStudent(studentCode) {
   const container = document.getElementById("unmarkedStudents"); // hoặc 'studentGrid' nếu bạn dùng tên đó
 
   savedStudents.forEach(code => {
+    
     // Nếu ô box chưa tồn tại thì tạo mới
     if (!document.getElementById(`box-${code}`)) {
       const box = document.createElement('div');
@@ -767,7 +818,7 @@ function highlightStudent(studentCode) {
           <div class="menu-wrapper">
             <button class="menu-button" onclick="toggleMenu('${code}')">⋮</button>
             <div class="dropdown-menu" id="menu-${code}">
-              <button onclick="highlightStudent('${code}')">🔖 Đánh dấu</button>
+              <button onclick="highlightStudents('${code}')">🔖 Đánh dấu</button>
               <button onclick="kickStudent('${code}')">👢 Kick</button>
               <button onclick="blockStudent('${code}')">⛔ Chặn</button>
             </div>
@@ -779,11 +830,11 @@ function highlightStudent(studentCode) {
           <video id="remoteVideo-camera-${code}" autoplay playsinline muted width="150" height="100"></video>
           <video id="remoteVideo-screen-${code}" autoplay playsinline muted width="150" height="100"></video>
         </div>
-       <div class="status">🟢 Vừa vào phòng</div>
-      ${data.status === 'submitted' ? `<div class="score">🎯 Điểm: ${data.score}</div>` : ''}
+       <div class="status"> Đang làm bài</div>
+        <div class="score">🎯 Điểm:  </div> 
+      
     `;
       
-
       container.appendChild(box);
     }
   });

@@ -1,5 +1,5 @@
 from flask import Flask, logging, request, render_template, jsonify,  Blueprint, current_app, flash
-from extract_text import extract_text, split_text_by_chapters, extract_chapters_from_file, split_text_by_chapters_advance
+from extract_text import extract_text, split_text_by_chapters, extract_chapters_from_file, split_text_by_chapters_advance, extract_text_advance, split_text_by_chapters_scd, extract_chapters_from_file_advace
 from generates_questions import generate_questions, generate_questions_from_jobs, generate_questions_advance
 import os
 import mysql.connector
@@ -56,16 +56,68 @@ def extract_chapters():
         return jsonify({'error': 'No file provided'}), 400
 
     filename = secure_filename(file.filename)
-    file_pathh = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
+    file_pathh = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
     file.save(file_pathh)
 
     try:
         print("📥 Nhận file và bắt đầu tách chương")
-        chapters = extract_chapters_from_file(file_pathh)
+        chapters = extract_chapters_from_file_advace(file_pathh)
         print("📚 Danh sách chương trích xuất:", chapters)
         return jsonify({'chapters': chapters})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+def is_duplicate_question(new_question: str, exclude_id=None, threshold=0.85):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Lấy tất cả câu hỏi hiện tại trong DB
+    sql = "SELECT id, question_text FROM question_bank"
+    if exclude_id:  # khi update thì bỏ qua chính nó
+        sql += " WHERE id != %s"
+        cursor.execute(sql, (exclude_id,))
+    else:
+        cursor.execute(sql)
+
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    if not rows:
+        return False, None
+
+    # Encode câu hỏi mới
+    new_embedding = models.encode(new_question, convert_to_tensor=True)
+
+    # Kiểm tra trùng với từng câu trong DB
+    for row in rows:
+        existing_embedding = models.encode(row["question_text"], convert_to_tensor=True)
+        similarity = util.cos_sim(new_embedding, existing_embedding).item()
+        if similarity >= threshold:
+            return True, row["id"]
+
+    return False, None
+    
+    
+@question_bp.route('/check-exam-code/<int:exam_set_id>')
+def check_exam_code(exam_set_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT COUNT(*) AS cnt
+        FROM exam_codes
+        WHERE exam_set_id = %s
+    """, (exam_set_id,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+    
+    #print("in ra reusult", result)
+
+    return jsonify({"has_code": result['cnt'] > 0})
+
     
     
     
@@ -396,7 +448,166 @@ def view_question_bank():
 
 
 
+
 ###### KẾT THÚC ROUTE
+
+##### route này để lấy danh sách môn học từ bảng bộ đề
+@question_bp.route("/generate-subject", methods=["GET"])
+def generate_subject():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Lấy danh sách môn học, loại bỏ trùng lặp
+    cursor.execute("""
+        SELECT DISTINCT subject_name
+        FROM exam_sets
+        WHERE subject_name IS NOT NULL AND subject_name <> ''
+    """)
+    subjects = [row[0] for row in cursor.fetchall()]
+
+    cursor.close()
+    conn.close()
+
+    # Render template và truyền danh sách môn học
+    return render_template("question_bank.html", subjects=subjects)
+
+
+
+### kết thúc route lấy danh sách môn học từ bảng bộ đề
+
+##### route này thêm vào đê thêm câu hỏi vào ngân hàng
+
+@question_bp.route("/api/add-question", methods=["POST"])
+def add_question():
+    data = request.get_json()
+
+    # Lấy dữ liệu từ request
+    subject_name = data.get("subject_name")
+    level = data.get("level")
+    question_text = data.get("question_text")
+    answer_a = data.get("answer_a")
+    answer_b = data.get("answer_b")
+    answer_c = data.get("answer_c")
+    answer_d = data.get("answer_d")
+    correct_answer = data.get("correct_answer")
+
+    # user_id có thể lấy từ session hoặc mặc định
+    user_id = current_user.id  # mặc định 1 là admin
+
+    # Validate dữ liệu
+    if not all([subject_name, level, question_text, answer_a, answer_b, answer_c, answer_d, correct_answer]):
+        return jsonify({"success": False, "message": "Thiếu dữ liệu bắt buộc."}), 400
+    
+    is_dup, dup_id = is_duplicate_question(question_text)
+    if is_dup:
+        return jsonify({
+            "success": False,
+            "message": f"Câu hỏi trùng với câu có id = {dup_id}"
+        }), 400
+
+    # Kết nối DB
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO question_bank (
+                question_id, exam_set_id, user_id, subject_name, level,
+                answer_a, answer_b, answer_c, answer_d, correct_answer,
+                question_text, created_at
+            )
+            VALUES (
+                NULL, NULL, %s, %s, %s,
+                %s, %s, %s, %s, %s,
+                %s, NOW()
+            )
+        """, (
+            user_id, subject_name, level,
+            answer_a, answer_b, answer_c, answer_d, correct_answer,
+            question_text
+        ))
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+    return jsonify({"success": True, "message": "Thêm câu hỏi thành công."})
+
+
+### kết thúc route thêm câu hỏi vào ngân hàng
+
+###### các route mối thêm vào
+
+@question_bp.route("/question-bank/<int:id>")
+def get_question(id):
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM question_bank WHERE id=%s", (id,))
+    question = cur.fetchone()
+    conn.close()
+    print("in ra question", question)
+    return jsonify(question)
+
+@question_bp.route("/update-question-bank", methods=["POST"])
+def update_question_bank():
+    
+    print("Form data:", request.form)
+    qid = request.form["id"]
+    content = request.form["content"]
+    option_a = request.form["option_a"]
+    option_b = request.form["option_b"]
+    option_c = request.form["option_c"]
+    option_d = request.form["option_d"]
+    correct_answer = request.form["correct_answer"]
+    difficulty = request.form["difficulty"]
+    
+    
+    
+    is_dup, dup_id = is_duplicate_question(content)
+    if is_dup:
+        return jsonify({
+            "success": False,
+            "message": f"Câu hỏi trùng với câu có id = {dup_id}"
+        }), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE question_bank
+        SET question_text=%s, answer_a=%s, answer_b=%s, answer_c=%s, answer_d=%s,
+            correct_answer=%s, level=%s
+        WHERE id=%s
+    """, (content, option_a, option_b, option_c, option_d, correct_answer,difficulty, qid))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+@question_bp.route("/question-bank-list")
+def question_bank_list():
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM question_bank")
+    rows = cur.fetchall()
+    conn.close()
+    return render_template("question_bank.html", questions=rows)
+
+@question_bp.route("/delete-question/<int:question_id>", methods=["DELETE"])
+def delete_question_bank(question_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM question_bank WHERE id = %s", (question_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status": "success"})
+
+
+#### kết thúc các route mới thêm vào
     
 # route này mới thêm vào
 @question_bp.route('/exam_set/<int:exam_set_id>', methods=['GET'])
@@ -769,8 +980,9 @@ def index():
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
         file.save(file_path)
         
+        
         # Trích xuất văn bản từ file PDF/Word
-        extracted_text = extract_text(file_path)
+        extracted_text = extract_text_advance(file_path)
         
         #print("Văn bản trích từ file:", extracted_text)
    
@@ -791,7 +1003,7 @@ def index():
         # Ngắt ở đây để kiểm tra form submit trước, không gọi GPT
         #return "✅ Đã nhận đủ dữ liệu POST! Không gọi sinh câu hỏi lúc này."
 
-
+        
         # Tạo exam_set mới
         set_id = create_exam_set(set_name, user_id = user_id)
 
@@ -807,7 +1019,7 @@ def index():
             #questions = generate_questions_from_selected_chapters(file_path, selected_chapters, total_questions)
             
             # kết thúc đoạn mới thêm vào
-            chapter_texts = split_text_by_chapters(extracted_text)
+            chapter_texts = split_text_by_chapters_scd(extracted_text)
             # Sau khi không tách được chương
             if not chapter_texts:
                 flash("❗Không thể phát hiện các chương trong tài liệu. Vui lòng kiểm tra tiêu đề chương như 'Chương 1', 'CHƯƠNG I'... mỗi chương nên bắt đầu ở dòng mới.", "warning")
@@ -854,7 +1066,7 @@ def index():
             num_questions = int(request.form.get("tong_so_cau", 50))  # lấy tổng số câu hỏi
             print("Tổng số câu hỏi cầu tạo", num_questions)
             #return "Tổng số câu hỏi cần tạo"
-            chapter_texts = split_text_by_chapters(extracted_text)
+            chapter_texts = split_text_by_chapters_scd(extracted_text)
             
             if not chapter_texts:
                 flash("❗Không thể phát hiện các chương trong tài liệu. Vui lòng kiểm tra tiêu đề chương như 'Chương 1', 'CHƯƠNG I'... mỗi chương nên bắt đầu ở dòng mới.", "warning")

@@ -17,7 +17,7 @@
         <p><strong>⏰ Còn lại:</strong> <span id="countdown"></span></p>
     </div>
 
-    <form method="POST" action="{{ url_for('exam_hs.submit_thpt2025_exam', room_code=room_code) }}" id="examForm">
+    <form id="examForm" method="POST" action="{{ url_for('exam_hs.submit_thpt2025_exam', room_code=room_code) }}" id="examForm">
         <input type="hidden" name="student_exam_id" value="{{ student_exam_id }}">
         <input type="hidden" name="room_code" value="{{ room_code }}">
         <input type="hidden" name="exam_code" value="{{ exam_code }}">
@@ -94,6 +94,34 @@
     let localScreenTrack = null;
 
 
+
+
+    function allAnswered() {
+    let allOk = true;
+
+    // --- Kiểm tra MCQ (radio) ---
+    document.querySelectorAll("[name^='mcq_']").forEach(group => {
+        const name = group.getAttribute("name");
+        // Lấy tất cả input radio trong group
+        const radios = document.querySelectorAll(`input[name="${name}"]`);
+        // Kiểm tra có cái nào được chọn chưa
+        const checked = Array.from(radios).some(r => r.checked);
+        if (!checked) {
+            allOk = false;
+        }
+    });
+
+    // --- Kiểm tra SA (textarea) ---
+    document.querySelectorAll("textarea[name^='sa_']").forEach(textarea => {
+        if (textarea.value.trim() === "") {
+            allOk = false;
+        }
+    });
+
+    return allOk;
+}
+
+
     function updateCountdown() {
       const now = new Date();
       const remaining = endTime - now;
@@ -102,7 +130,12 @@
         countdown.textContent = "⏱ Hết giờ!";
         clearInterval(interval);
         alert("Đã hết giờ, hệ thống sẽ tự động nộp bài.");
-        examForm.submit();
+        if (allAnswered()) {
+        document.getElementById("examForm").submit();
+       } else {
+        window.location.href = "/exam_incomplete";
+       }
+        //examForm.submit();
       } else {
         const mins = Math.floor(remaining / 60000);
         const secs = Math.floor((remaining % 60000) / 1000);
